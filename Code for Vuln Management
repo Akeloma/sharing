@@ -1,0 +1,5 @@
+Baseline_31Dec2024 =
+CALCULATE(
+    SUM('Vulnerability'[VulnCount]),
+    'Vulnerability'[Date] = DATE(2024,12,31)
+)
