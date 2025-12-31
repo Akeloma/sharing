@@ -3,3 +3,14 @@ CALCULATE(
     SUM('Vulnerability'[VulnCount]),
     'Vulnerability'[Date] = DATE(2024,12,31)
 )
+
+
+
+
+OEs_Met_80pct =
+COUNTROWS (
+    FILTER (
+        VALUES ( 'Vulnerability Management'[OE] ),
+        [Percent_Achieved] >= 0.8
+    )
+)
