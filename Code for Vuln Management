@@ -14,3 +14,9 @@ COUNTROWS (
         [Percent_Achieved] >= 0.8
     )
 )
+
+
+
+
+
+hi i need to create a DAX measure to find out the next month's remediation number, i need to filter out the column 'Current Status' to be 'Forward Looking Toxic' and 'Toxic'. next i need to filter out the 0 and the blanks from the column, 'Number of IT Assets'. and lastly, we need to filter out the column, 'Planned Completion Date' to only show those that are next month. and also yes, we have a date slicer. the table name in powerbi is 'Filter - Toxic Remediation'
