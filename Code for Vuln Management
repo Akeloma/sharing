@@ -20,3 +20,36 @@ COUNTROWS (
 
 
 hi i need to create a DAX measure to find out the next month's remediation number, i need to filter out the column 'Current Status' to be 'Forward Looking Toxic' and 'Toxic'. next i need to filter out the 0 and the blanks from the column, 'Number of IT Assets'. and lastly, we need to filter out the column, 'Planned Completion Date' to only show those that are next month. and also yes, we have a date slicer. the table name in powerbi is 'Filter - Toxic Remediation'
+
+
+
+
+NextMonth_Remediation_ITAssets :=
+VAR AnchorDate =
+    MAX ( Calendar[Date] )   -- uses your slicer context
+VAR NextMonthStart =
+    EOMONTH ( AnchorDate, 0 ) + 1
+VAR NextMonthEnd =
+    EOMONTH ( AnchorDate, 1 )
+RETURN
+CALCULATE (
+    SUM ( 'Filter - Toxic Remediation'[Number of IT Assets] ),
+
+    -- important: remove slicer filtering coming via the relationship to fact[Date]
+    REMOVEFILTERS ( Calendar ),
+    REMOVEFILTERS ( 'Filter - Toxic Remediation'[Date] ),
+
+    -- status filter
+    'Filter - Toxic Remediation'[Current Status] IN { "Forward Looking Toxic", "Toxic" },
+
+    -- exclude blanks and zeros
+    'Filter - Toxic Remediation'[Number of IT Assets] <> BLANK (),
+    'Filter - Toxic Remediation'[Number of IT Assets] <> 0,
+
+    -- next month filter on Planned Completion Date
+    FILTER (
+        ALL ( 'Filter - Toxic Remediation'[Planned Completion Date] ),
+        'Filter - Toxic Remediation'[Planned Completion Date] >= NextMonthStart
+            && 'Filter - Toxic Remediation'[Planned Completion Date] <= NextMonthEnd
+    )
+)
