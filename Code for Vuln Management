@@ -17,72 +17,35 @@ COUNTROWS (
 
 
 
+Unmanaged Risks (ITOM+ISMS+BA) :=
+CALCULATE(
+    SUM ( 'YourTable'[NumericalScore] ),
+    'YourTable'[IT Area] = "Unmanaged Risks: ITOM + ISMS + BA"
+)
 
-
-hi i need to create a DAX measure to find out the next month's remediation number, i need to filter out the column 'Current Status' to be 'Forward Looking Toxic' and 'Toxic'. next i need to filter out the 0 and the blanks from the column, 'Number of IT Assets'. and lastly, we need to filter out the column, 'Planned Completion Date' to only show those that are next month. and also yes, we have a date slicer. the table name in powerbi is 'Filter - Toxic Remediation'
-
-
-
-
-NextMonth_Remediation_ITAssets :=
-VAR AnchorDate =
-    MAX ( Calendar[Date] )   -- uses your slicer context
-VAR NextMonthStart =
-    EOMONTH ( AnchorDate, 0 ) + 1
-VAR NextMonthEnd =
-    EOMONTH ( AnchorDate, 1 )
-RETURN
-CALCULATE (
-    SUM ( 'Filter - Toxic Remediation'[Number of IT Assets] ),
-
-    -- important: remove slicer filtering coming via the relationship to fact[Date]
-    REMOVEFILTERS ( Calendar ),
-    REMOVEFILTERS ( 'Filter - Toxic Remediation'[Date] ),
-
-    -- status filter
-    'Filter - Toxic Remediation'[Current Status] IN { "Forward Looking Toxic", "Toxic" },
-
-    -- exclude blanks and zeros
-    'Filter - Toxic Remediation'[Number of IT Assets] <> BLANK (),
-    'Filter - Toxic Remediation'[Number of IT Assets] <> 0,
-
-    -- next month filter on Planned Completion Date
-    FILTER (
-        ALL ( 'Filter - Toxic Remediation'[Planned Completion Date] ),
-        'Filter - Toxic Remediation'[Planned Completion Date] >= NextMonthStart
-            && 'Filter - Toxic Remediation'[Planned Completion Date] <= NextMonthEnd
+EUC Scoping % (decimal) :=
+VAR Pct =
+    CALCULATE(
+        AVERAGE ( 'YourTable'[NumericalScore] ),
+        'YourTable'[IT Area] = "Completed Risk Scoping BAs: EUCs"
     )
+RETURN
+DIVIDE( Pct, 100 )
+
+
+Total EUC Apps (planned+active) :=
+CALCULATE(
+    SUM ( 'YourTable'[NumericalScore] ),
+    'YourTable'[IT Area] = "Total EUC Business Applications (planned+active)"
 )
 
 
-
-
-hi i need to figure out the calculation for number of risks scoped. this is the risk description below:
-Health Indicator: Unmanaged Risks: ITOM + ISMS + BA
-Description
-The indicator refers to current digital & information risks pertaining to the IT Operating Model (ITOM), the Information Security Management System (ISMS), and Business Applications (BA). Such risks are identified for example via:
-
-re ITOM: the annual IT Compliance Self-Assessment, the OE IT Reviews, but also Audits by internal audit functions as well as external auditors. 
-
-re ISMS: the annual IS Compliance Self-Assessment, the IS Peer Reviews, but also Audits by internal audit functions as well as external auditors
-
-re BA: Fit-Gap-Analyses (FGA), Toxic components analyses, as well as Audits.
-
- 
-
-All digital & information risks must be managed in Allianz' global IT-EGRC tool following the mandated Digital & Information Risk Management process, following through the phases: identification, assessment, response and continuous monitoring & reporting. Digital & information risks shall not remain unmanaged; an information risk is considered unmanaged, if it takes longer than 4 weeks to move the risk from state "identified" (for newly identified risks) or from state "re-assessment" (for risks with expired mitigation timeline) to the state "in monitoring" (i.e. remains in any status other than "in monitoring" for more than 4 weeks).
-
-Measurement and Calculation
-In scope are all current digital & information risks with Object at Risk Type = “ITOM”; “ISMS”; “BA”, which are not in state "previous", "canceled" or "closed". The time passed in managing the risk is calculated based on the value in the field Identification Date, which is set when the risk is initially pushed into phase "identification" or is pushed into phase "re-assessment". Current risks with Current Status = "in monitoring" and current risks with Identification Date passed less than 4 weeks are considered managed.
-
-this is the one i need to figure out -
-Health Indicator: Completed Risk Scoping BAs: EUCs
-Description
-The indicator reflects the availability of Business Owner-approved scoping information (values for criticality, confidentiality, integrity, availability) for Business Applications of type End User Computing (EUC) in Archer. This is necessary to identify the inherent risk (criticality) as well as the protection requirements for confidentiality, integrity and availability. The scoping of a EUC Business Applications is mandatory for all OEs and needs to be performed on a yearly basis. Further information on the scoping can be found with the Integrated Information Risk Management.
-
-Measurement and Calculation
-The indicator is calculated based on the share of planned and active EUC Business Applications with scoping information in status “approved”, compared to all planned and active EUC Business applications in Archer.
-
-1) Business Applications are considered active unless they assume lifecycle states: decommissioned or deprecated. Whether a business application is classified as "EUC" or not is determined in ADOIT. Business applications of type "EUC" are grouped using the grouping element "Application Group: End User Computing (EUC)" within the "aggregated in" relationship. Business applications that do not have this grouping element are considered "regular" business applications.
-
-the picture belongs to the description in Health Indicator: Completed Risk Scoping BAs: EUCs
+EUC Apps Scoped (#) :=
+VAR ScopingPct = [EUC Scoping % (decimal)]
+VAR TotalEUC   = [Total EUC Apps (planned+active)]
+RETURN
+IF(
+    ISBLANK(TotalEUC),
+    BLANK(),
+    ROUND( ScopingPct * TotalEUC, 0 )
+)
