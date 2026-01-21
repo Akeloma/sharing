@@ -54,3 +54,19 @@ let
     #"Changed Type1" = Table.TransformColumnTypes(#"Renamed Columns",{{"Date", type date}})
 in
     #"Changed Type1"
+
+
+
+
+PlanValue :=
+VAR SelectedYear =
+    COALESCE( SELECTEDVALUE('Calendar'[Year]), YEAR(TODAY()) )
+RETURN
+CALCULATE(
+    SUM('Decom Plan Compiled'[Plan Column(PD)]),
+    FILTER(
+        ALL('Decom Plan Compiled'),
+        YEAR('Decom Plan Compiled'[Year]) = SelectedYear
+    )
+)
+
