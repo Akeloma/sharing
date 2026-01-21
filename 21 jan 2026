@@ -1,0 +1,112 @@
+let
+    Source = Excel.Workbook(File.Contents("C:\Users\DMUQ6RG\Downloads\Decomissioning_Compiled jan 2025-Jan 2026 (2).xlsx"), null, true),
+    #"Raw Data_Sheet" = Source{[Item="Raw Data",Kind="Sheet"]}[Data],
+    #"Promoted Headers" = Table.PromoteHeaders(#"Raw Data_Sheet", [PromoteAllScalars=true]),
+    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers",{
+        {"OE", type text}, {"Program", type text}, {"Column3", type text}, {"Column4", type text}, {"Column5", type text}, {"Column6", type text}, {"Column7", type text}, {"Column8", type text}, 
+        {"Project", type text}, {"Column10", type text}, {"Column11", type any}, {"Column12", type any}, {"Column13", type any}, {"Column14", type any}, {"Column15", type text}, {"Column16", type text}, 
+        {"Column17", type text}, {"Column18", type text}, {"Column19", type text}, {"Application (Legacy)", type text}, {"Column21", type text}, {"Column22", type text}, {"Column23", type text}, 
+        {"Column24", type any}, {"Column25", type any}, {"Application (Target)", type text}, {"Column27", type text}, {"Milestone 1", type text}, {"Column29", type text}, {"Column30", type text}, 
+        {"Column31", type any}, {"Milestone 2", type text}, {"Column33", type text}, {"Column34", type text}, {"Column35", type any}, {"Milestone 3", type text}, {"Column37", type text}, 
+        {"Column38", type text}, {"Column39", type any}, {"Milestone 4", type text}, {"Column41", type text}, {"Column42", type text}, {"Column43", type any}, {"Milestone 5", type text}, 
+        {"Column45", type text}, {"Column46", type text}, {"Column47", type any}, {"Milestone 6", type text}, {"Column49", type text}, {"Column50", type text}, {"Column51", type text}, 
+        {"Milestone 7", type text}, {"Column53", type text}, {"Column54", type text}, {"Column55", type text}, {"Milestone 8", type text}, {"Column57", type text}, {"Column58", type text}, 
+        {"Column59", type text}, {"Risk 1", type text}, {"Column61", type text}, {"Column62", type text}, {"Risk 2", type text}, {"Column64", type text}, {"Column65", type text}, {"Risk 3", type text}, 
+        {"Column67", type text}, {"Column68", type text}, {"Grouping", type text}
+    }),
+    #"Promoted Headers1" = Table.PromoteHeaders(#"Changed Type", [PromoteAllScalars=true]),
+    #"Changed Type1" = Table.TransformColumnTypes(#"Promoted Headers1",{
+        {"Name", type text}, {"Name_1", type text}, {"ID", type text}, {"Description", type text}, {"Project Manager", type text}, {"Overal Program Status", type text}, {"Main updates", type text}, 
+        {"Comment on overall Status", type text}, {"Name_2", type text}, {"ID_3", type text}, {"Planned Start Date", type any}, {"Planned End Date", type any}, {"Forecast Start Date", type any}, 
+        {"Forecast End Date", type any}, {"Phase", type text}, {"Status", type text}, {"Comment on overall status", type text}, {"Additional information on project lifecycle", type text}, 
+        {"Additional Information on Project scope", type text}, {"Application Name", type text}, {"ID_4", type text}, {"Domain", type text}, {"Domain Area", type text}, {"Valid From", type any}, 
+        {"Valid Until", type any}, {"Name_5", type text}, {"ID_6", type text}, {"Name_7", type text}, {"Status_8", type text}, {"Comment", type text}, {"Due Date", type any}, {"Name_9", type text}, 
+        {"Status_10", type text}, {"Comment_11", type text}, {"Due Date_12", type any}, {"Name_13", type text}, {"Status_14", type text}, {"Comment_15", type text}, {"Due Date_16", type datetime}, 
+        {"Name_17", type text}, {"Status_18", type text}, {"Comment_19", type text}, {"Due Date_20", type datetime}, {"Name_21", type text}, {"Status_22", type text}, {"Comment_23", type text}, 
+        {"Due Date_24", type datetime}, {"Name_25", type text}, {"Status_26", type text}, {"Comment_27", type text}, {"Due Date_28", type text}, {"Name_29", type text}, {"Status_30", type text}, 
+        {"Comment_31", type text}, {"Due Date_32", type text}, {"Name_33", type text}, {"Status_34", type text}, {"Comment_35", type text}, {"Due Date_36", type text}, {"Name_37", type text}, 
+        {"Description_38", type text}, {"Status_39", type text}, {"Name_40", type text}, {"Description_41", type text}, {"Status_42", type text}, {"Name_43", type text}, {"Description_44", type text}, 
+        {"Status_45", type text}, {"Overall Comment OE", type text}, {"Date extracted", type date}
+    }),
+    #"Renamed Columns" = Table.RenameColumns(#"Changed Type1",{{"Comment on overall status", "Comment on overall status.1"}}),
+    #"Removed Other Columns" = Table.SelectColumns(#"Renamed Columns",{
+        "Name", "ID", "ID_3", "ID_4", "ID_6", "Description", "Overal Program Status", "Forecast End Date", "Phase", "Application Name", "Domain", "Domain Area", "Date extracted"
+    }),
+    #"Added Custom" = Table.AddColumn(#"Removed Other Columns", "Date", each Date.From(DateTime.FromText([Forecast End Date], "en-US"))),
+    #"Removed Columns" = Table.RemoveColumns(#"Added Custom",{"Date"}),
+    #"Changed Type2" = Table.TransformColumnTypes(#"Removed Columns",{{"Forecast End Date", type date}}),
+    #"Filtered Rows" = Table.SelectRows(#"Changed Type2", each ([Name] <> null and [Name] <> "") and ([Forecast End Date] <> null)),
+    #"Split Column by Delimiter" = Table.SplitColumn(#"Filtered Rows", "Name", Splitter.SplitTextByEachDelimiter({" "}, QuoteStyle.Csv, true), {"Name.1", "Name.2"}),
+    #"Changed Type3" = Table.TransformColumnTypes(#"Split Column by Delimiter",{{"Name.1", type text}, {"Name.2", type text}}),
+    #"Renamed Columns1" = Table.RenameColumns(#"Changed Type3",{{"Name.1", "OE Name"}, {"Name.2", "OE Code"}}),
+    #"Replaced Value" = Table.ReplaceValue(#"Renamed Columns1","(","",Replacer.ReplaceText,{"OE Code"}),
+    #"Replaced Value1" = Table.ReplaceValue(#"Replaced Value",")","",Replacer.ReplaceText,{"OE Code"})
+in
+    #"Replaced Value1"
+
+
+
+
+
+
+
+
+
+
+CompletedCount = CALCULATE(
+    COUNTROWS('Decommissioning Apps'),
+    'Decommissioning Apps'[Phase] = "Completed"
+)+0
+
+
+Toxic_New_Landing_page = 
+VAR YearIsSel  = HASONEVALUE('Calendar'[Year])
+VAR MonthIsSel = HASONEVALUE('Calendar'[Month])
+
+/* Decide one “target” date based on the slicers */
+VAR TargetDate =
+    IF(
+        MonthIsSel,
+        // A month is selected: take the max date within that selected year+month
+        CALCULATE(
+            MAX('Calendar'[Date]),
+            ALLEXCEPT('Calendar', 'Calendar'[Year], 'Calendar'[Month])
+        ),
+        IF(
+            YearIsSel,
+            // Only a year is selected: take the max date within that selected year
+            CALCULATE(
+                MAX('Toxic Remediation'[Date]),
+                ALLEXCEPT('Calendar', 'Calendar'[Year])
+            ),
+            // Nothing selected: take the max date across the full calendar
+            CALCULATE(
+                MAX('Toxic Remediation'[Date]),
+                ALL('Toxic Remediation')
+            )
+        )
+    )
+
+/* Build month window around TargetDate */
+VAR StartOfMonthh = DATE(YEAR(TargetDate), MONTH(TargetDate), 1)
+VAR EndOfMonthh   = EOMONTH(TargetDate, 0)
+
+/* Compute values for the chosen month window */
+VAR GROUP_ =
+    CALCULATE(
+        SUM('Toxic Remediation'[Number of IT Assets]),
+        'Toxic Remediation'[Current Status] = "Toxic",
+        'Toxic Remediation'[IT Component Type] = "Group",
+        DATESBETWEEN('Calendar'[Date], StartOfMonthh, EndOfMonthh)
+    ) + 0
+
+VAR LOCAL_ =
+    CALCULATE(
+        SUM('Toxic Remediation'[Number of IT Assets]),
+        'Toxic Remediation'[Current Status] = "Toxic",
+        'Toxic Remediation'[IT Component Type] = "Regional/Local",
+        DATESBETWEEN('Calendar'[Date], StartOfMonthh, EndOfMonthh)
+    ) + 0
+
+RETURN
+    FORMAT(GROUP_, "0") & " / " & FORMAT(LOCAL_, "0")
