@@ -1,0 +1,42 @@
+RegionSorted = SWITCH(
+    TRUE(),
+    'IT Architecture'[Region] = "Global", "Global",
+    'IT Architecture'[Region] = "Regional", "Regional",
+    'IT Architecture'[Region] = "Local", "Local",
+    'IT Architecture'[Region] = "Not Applicable", "Not Applicable",
+    BLANK()  // Default case if none match
+)
+
+NCount = 
+VAR CustomStartDate = DATE(2025, 10, 1)  // Check with Sabari and replace this data or use parameter's for the same
+VAR EndDate = DATE(YEAR(TODAY()), 12, 31) 
+RETURN
+CALCULATE(
+    COUNTROWS(
+        FILTER(
+            'IT Architecture',
+            'IT Architecture'[Valid From] >= CustomStartDate && 'IT Architecture'[Valid From] <= EndDate
+        )
+    )
+)+0
+
+
+CCount = 
+CALCULATE(
+    COUNTROWS('IT Architecture'),
+    FILTER(
+        'IT Architecture',
+        'IT Architecture'[Lifecycle state] = "In production" || 'IT Architecture'[Lifecycle state] = "Retired"
+    )
+)+0
+
+DCount = SUM('IT Architecture'[D])+0
+
+D = 
+CALCULATE(
+    COUNTROWS('Filter - Decommissioning Apps'),
+    FILTER(
+        'Filter - Decommissioning Apps',
+        'Filter - Decommissioning Apps'[ID_4] = 'IT Architecture'[ID]
+    )
+)
