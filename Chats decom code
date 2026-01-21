@@ -1,0 +1,43 @@
+CompletedCount :=
+VAR YearIsSel  = HASONEVALUE ( 'Calendar'[Year] )
+VAR MonthIsSel = HASONEVALUE ( 'Calendar'[Month] )
+
+/* pick a target date based on slicer */
+VAR TargetDate =
+    IF (
+        MonthIsSel,
+        CALCULATE (
+            MAX ( 'Calendar'[Date] ),
+            ALLEXCEPT ( 'Calendar', 'Calendar'[Year], 'Calendar'[Month] )
+        ),
+        IF (
+            YearIsSel,
+            CALCULATE (
+                MAX ( 'Calendar'[Date] ),
+                ALLEXCEPT ( 'Calendar', 'Calendar'[Year] )
+            ),
+            CALCULATE (
+                MAX ( 'Decommissioning Apps'[Forecast Date] ),
+                ALL ( 'Decommissioning Apps' )
+            )
+        )
+    )
+
+VAR StartDate =
+    IF ( MonthIsSel,
+        DATE ( YEAR ( TargetDate ), MONTH ( TargetDate ), 1 ),
+        DATE ( YEAR ( TargetDate ), 1, 1 )
+    )
+
+VAR EndDate =
+    IF ( MonthIsSel,
+        EOMONTH ( TargetDate, 0 ),
+        DATE ( YEAR ( TargetDate ), 12, 31 )
+    )
+
+RETURN
+CALCULATE (
+    COUNTROWS ( 'Decommissioning Apps' ),
+    'Decommissioning Apps'[Phase] = "Completed",
+    DATESBETWEEN ( 'Decommissioning Apps'[Forecast Date], StartDate, EndDate )
+) + 0
