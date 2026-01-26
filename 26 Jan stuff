@@ -1,0 +1,37 @@
+CY+3_P_CashNew = 
+VAR _seldate =
+    MAX ( 'Calendar'[Date] )
+VAR _selyear =
+    SELECTEDVALUE ( 'Calendar'[Year] )
+VAR _selmonth =
+    SELECTEDVALUE ( 'Calendar'[MonthNumber] )
+VAR TargetDate =
+    CALCULATE (
+        MAX ( 'Console - test'[Date] ),
+        ALL ( 'Calendar' ),
+        ( 'Calendar'[Year] < _selyear
+            || ( 'Calendar'[Year] = _selyear && 'Calendar'[MonthNumber] <= _selmonth ) )
+    )
+RETURN
+    ABS (
+        IF (
+            ISBLANK ( _selyear ) || ISBLANK ( _selmonth ),
+            CALCULATE(
+    SUM('Console - test'[Value]),
+    'Console - test'[Attribute] = "CY+3 P Cash"
+),
+            IF (
+                ISBLANK ( TargetDate ),
+                0,
+                CALCULATE (
+                    CALCULATE(
+    SUM('Console - test'[Value]),
+    'Console - test'[Attribute] = "CY+3 P Cash"
+),
+                    ALL ( 'Calendar' ),
+                    'Calendar'[Year] = YEAR ( TargetDate ),
+                    'Calendar'[MonthNumber] = MONTH ( TargetDate )
+                )
+            )
+        )
+    )
