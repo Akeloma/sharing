@@ -1,0 +1,50 @@
+i need help for Power BI. right now, i have an architecture table, and i have its historical data. i have created a relationship with my calendar table for the month and year slicer to work. and it does work, it gives me the correct data. however, when the month and year is not selected, then it returns the sum of the entire year's data, which is wrong. i want it to return the latest data extracted. if the year is out of range, it will simply return 0. but if the year is in range, it will return the latest data available. i wanted it to follow this slicer logic -IT Audit Findings (Selected Month) = 
+VAR YearIsSel  = HASONEVALUE('Calendar'[Year])
+VAR MonthIsSel = HASONEVALUE('Calendar'[Month])
+
+/* Pick a single target date based on slicers */
+VAR TargetDate =
+    IF(
+        MonthIsSel,
+        CALCULATE(
+            MAX('tblAudit'[Date extracted]),
+            ALLEXCEPT('Calendar', 'Calendar'[Year], 'Calendar'[Month])
+        ),
+        IF(
+            YearIsSel,
+            CALCULATE(
+                MAX('tblAudit'[Date extracted]),
+                ALLEXCEPT('Calendar', 'Calendar'[Year])
+            ),
+            CALCULATE(
+                MAX('tblAudit'[Date extracted]),
+                ALL('tblAudit')
+            )
+        )
+    )
+
+RETURN
+IF(
+    ISBLANK(TargetDate),
+    0,
+    VAR StartOfMonthh = DATE(YEAR(TargetDate), MONTH(TargetDate), 1)
+    VAR EndOfMonthh   = EOMONTH(TargetDate, 0)
+    VAR Result_ =
+        CALCULATE(
+            SUM('tblAudit'[Count]),
+            KEEPFILTERS('tblAudit'[Status] = "Total IT Audit Findings"),
+            DATESBETWEEN('Calendar'[Date], StartOfMonthh, EndOfMonthh)
+        )
+    RETURN COALESCE(Result_, 0)
+)but i also think there's one column called Valid from, and it previously had a relationship with the calendar date column. after disabling that, I believe this is why we have this issue (since previously we only loaded one month's worth of data only) the dates from the column, valid from, needs to be the same as the year selected, if im not wrong. this is the measure i want to try converting first. thanks!NCount = 
+VAR CustomStartDate = DATE(2025, 10, 1)  // Check with Sabari and replace this data or use parameter's for the same
+VAR EndDate = DATE(2025, 12, 31) 
+RETURN
+CALCULATE(
+    COUNTROWS(
+        FILTER(
+            'IT Architecture',
+            'IT Architecture'[Valid From] >= CustomStartDate && 'IT Architecture'[Valid From] <= EndDate
+        )
+    )
+)+0
