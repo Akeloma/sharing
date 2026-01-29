@@ -1,10 +1,49 @@
-D = 
-CALCULATE(
-    COUNTROWS('Filter - Decommissioning Apps'),
-    FILTER(
-        'Filter - Decommissioning Apps',
-        'Filter - Decommissioning Apps'[ID_4] = 'IT Architecture'[ID]
-    )
-)
+Decommissioning Count (Selected Month) = 
+VAR YearIsSel = HASONEVALUE('Calendar'[Year])
+VAR MonthIsSel = HASONEVALUE('Calendar'[Month])
 
-DCount = SUM('IT Architecture'[D])+0
+/* Pick a single target date based on slicers */
+VAR TargetDate = 
+    IF(
+        MonthIsSel,
+        CALCULATE(
+            MAX('IT Architecture'[Date extracted]),  // Replace with your actual date column name
+            ALLEXCEPT('Calendar', 'Calendar'[Year], 'Calendar'[Month])
+        ),
+        IF(
+            YearIsSel,
+            CALCULATE(
+                MAX('IT Architecture'[Date extracted]),
+                ALLEXCEPT('Calendar', 'Calendar'[Year])
+            ),
+            CALCULATE(
+                MAX('IT Architecture'[Date extracted]),
+                ALL('IT Architecture')
+            )
+        )
+    )
+
+RETURN
+IF(
+    ISBLANK(TargetDate),
+    0,
+    VAR StartOfMonth = DATE(YEAR(TargetDate), MONTH(TargetDate), 1)
+    VAR EndOfMonth = EOMONTH(TargetDate, 0)
+    
+    VAR Result_ = 
+        CALCULATE(
+            SUMX(
+                'IT Architecture',
+                CALCULATE(
+                    COUNTROWS('Filter - Decommissioning Apps'),
+                    FILTER(
+                        'Filter - Decommissioning Apps',
+                        'Filter - Decommissioning Apps'[ID_4] = 'IT Architecture'[ID]
+                    )
+                )
+            ),
+            DATESBETWEEN('Calendar'[Date], StartOfMonth, EndOfMonth)
+        )
+    
+    RETURN COALESCE(Result_, 0)
+)
