@@ -1,4 +1,4 @@
-Decommissioning Count (Selected Month) = 
+NCount (Selected Period) = 
 VAR YearIsSel = HASONEVALUE('Calendar'[Year])
 VAR MonthIsSel = HASONEVALUE('Calendar'[Month])
 
@@ -27,22 +27,25 @@ RETURN
 IF(
     ISBLANK(TargetDate),
     0,
-    VAR StartOfMonth = DATE(YEAR(TargetDate), MONTH(TargetDate), 1)
-    VAR EndOfMonth = EOMONTH(TargetDate, 0)
+    VAR SelectedYear = YEAR(TargetDate)
+    VAR SelectedMonth = MONTH(TargetDate)
+    
+    /* Start date: First day of selected month */
+    VAR CustomStartDate = DATE(SelectedYear, SelectedMonth, 1)
+    
+    /* End date: Last day of selected year */
+    VAR EndDate = DATE(SelectedYear, 12, 31)
     
     VAR Result_ = 
         CALCULATE(
-            SUMX(
-                'IT Architecture',
-                CALCULATE(
-                    COUNTROWS('Filter - Decommissioning Apps'),
-                    FILTER(
-                        'Filter - Decommissioning Apps',
-                        'Filter - Decommissioning Apps'[ID_4] = 'IT Architecture'[ID]
-                    )
+            COUNTROWS(
+                FILTER(
+                    'IT Architecture',
+                    'IT Architecture'[Valid From] >= CustomStartDate 
+                    && 'IT Architecture'[Valid From] <= EndDate
+                    && YEAR('IT Architecture'[Valid From]) = SelectedYear  // Ensures Valid From is in selected year
                 )
-            ),
-            DATESBETWEEN('Calendar'[Date], StartOfMonth, EndOfMonth)
+            )
         )
     
     RETURN COALESCE(Result_, 0)
