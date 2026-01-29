@@ -1,0 +1,60 @@
+NCount (Latest) =
+VAR YearIsSel  = HASONEVALUE ( 'Calendar'[Year] )
+VAR MonthIsSel = HASONEVALUE ( 'Calendar'[MonthNo] )   -- use a Month Number column (1-12)
+
+VAR SelYear  = SELECTEDVALUE ( 'Calendar'[Year] )
+VAR SelMonth = SELECTEDVALUE ( 'Calendar'[MonthNo] )
+
+/* Pick ONE snapshot date (latest) based on slicers */
+VAR TargetExtractDate =
+    SWITCH (
+        TRUE (),
+        MonthIsSel,
+            CALCULATE (
+                MAX ( 'IT Architecture'[Date extracted] ),
+                ALLEXCEPT ( 'Calendar', 'Calendar'[Year], 'Calendar'[MonthNo] )
+            ),
+        YearIsSel,
+            CALCULATE (
+                MAX ( 'IT Architecture'[Date extracted] ),
+                ALLEXCEPT ( 'Calendar', 'Calendar'[Year] )
+            ),
+        CALCULATE ( MAX ( 'IT Architecture'[Date extracted] ), ALL ( 'IT Architecture' ) )
+    )
+
+/* Year used for date range */
+VAR YearToUse =
+    IF ( YearIsSel, SelYear, YEAR ( TargetExtractDate ) )
+
+/* Guardrail: if selected year not in data, return 0 */
+VAR MinYear =
+    CALCULATE ( MINX ( ALL ( 'IT Architecture' ), YEAR ( 'IT Architecture'[Date extracted] ) ) )
+VAR MaxYear =
+    CALCULATE ( MAXX ( ALL ( 'IT Architecture' ), YEAR ( 'IT Architecture'[Date extracted] ) ) )
+
+/* Start = first day of selected month; End = last day of selected year */
+VAR StartDate =
+    IF ( MonthIsSel, DATE ( YearToUse, SelMonth, 1 ), DATE ( YearToUse, 1, 1 ) )
+VAR EndDate =
+    DATE ( YearToUse, 12, 31 )
+
+RETURN
+IF (
+    ISBLANK ( TargetExtractDate )
+        || YearToUse < MinYear
+        || YearToUse > MaxYear,
+    0,
+    CALCULATE (
+        COUNTROWS ( 'IT Architecture' ),
+
+        /* 🔥 this is the key: only use ONE snapshot */
+        KEEPFILTERS ( 'IT Architecture'[Date extracted] = TargetExtractDate ),
+
+        /* apply your Valid From window */
+        FILTER (
+            ALL ( 'IT Architecture' ),
+            'IT Architecture'[Valid From] >= StartDate
+                && 'IT Architecture'[Valid From] <= EndDate
+        )
+    ) + 0
+)
