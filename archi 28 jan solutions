@@ -57,3 +57,28 @@ IF (
         )
     ) + 0
 )
+
+
+
+
+
+Debug - TargetExtractDate = MAXX( { [TargetExtractDate helper] }, [TargetExtractDate helper] )
+
+
+
+Debug - ExtractDate Used =
+VAR YearIsSel  = HASONEVALUE ( 'Calendar'[Year] )
+VAR MonthIsSel = HASONEVALUE ( 'Calendar'[MonthNo] )
+RETURN
+SWITCH (
+    TRUE (),
+    MonthIsSel,
+        CALCULATE ( MAX ( 'IT Architecture'[Date extracted] ),
+            ALLEXCEPT ( 'Calendar', 'Calendar'[Year], 'Calendar'[MonthNo] )
+        ),
+    YearIsSel,
+        CALCULATE ( MAX ( 'IT Architecture'[Date extracted] ),
+            ALLEXCEPT ( 'Calendar', 'Calendar'[Year] )
+        ),
+    CALCULATE ( MAX ( 'IT Architecture'[Date extracted] ), ALL ( 'IT Architecture' ) )
+)
