@@ -1,8 +1,44 @@
-CCount = 
-CALCULATE(
-    COUNTROWS('IT Architecture'),
-    FILTER(
-        'IT Architecture',
-        'IT Architecture'[Lifecycle state] = "In production" || 'IT Architecture'[Lifecycle state] = "Retired"
+IT Architecture Count (Selected Month) = 
+VAR YearIsSel = HASONEVALUE('Calendar'[Year])
+VAR MonthIsSel = HASONEVALUE('Calendar'[Month])
+
+/* Pick a single target date based on slicers */
+VAR TargetDate = 
+    IF(
+        MonthIsSel,
+        CALCULATE(
+            MAX('IT Architecture'[Date extracted]),  // Replace with your actual date column name
+            ALLEXCEPT('Calendar', 'Calendar'[Year], 'Calendar'[Month])
+        ),
+        IF(
+            YearIsSel,
+            CALCULATE(
+                MAX('IT Architecture'[Date extracted]),
+                ALLEXCEPT('Calendar', 'Calendar'[Year])
+            ),
+            CALCULATE(
+                MAX('IT Architecture'[Date extracted]),
+                ALL('IT Architecture')
+            )
+        )
     )
-)+0
+
+RETURN
+IF(
+    ISBLANK(TargetDate),
+    0,
+    VAR StartOfMonth = DATE(YEAR(TargetDate), MONTH(TargetDate), 1)
+    VAR EndOfMonth = EOMONTH(TargetDate, 0)
+    
+    VAR Result_ = 
+        CALCULATE(
+            COUNTROWS('IT Architecture'),
+            KEEPFILTERS(
+                'IT Architecture'[Lifecycle state] = "In production" 
+                || 'IT Architecture'[Lifecycle state] = "Retired"
+            ),
+            DATESBETWEEN('Calendar'[Date], StartOfMonth, EndOfMonth)
+        )
+    
+    RETURN COALESCE(Result_, 0)
+)
