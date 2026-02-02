@@ -77,9 +77,63 @@ IF(
         )
 
 
+--------------------------------------------------------------------------------
 
 
-The syntax for ',' is incorrect. (DAX(VAR YearIsSel = HASONEVALUE('Calendar'[Year])VAR MonthIsSel = HASONEVALUE('Calendar'[Month])/* Pick a single target date based on slicers */VAR TargetDate = IF( MonthIsSel, CALCULATE( MAX('Decommissioning Apps'[Date extracted]), ALLEXCEPT('Calendar', 'Calendar'[Year], 'Calendar'[Month]) ), IF( YearIsSel, CALCULATE( MAX('Decommissioning Apps'[Date extracted]), ALLEXCEPT('Calendar', 'Calendar'[Year]) ), CALCULATE( MAX('Decommissioning Apps'[Date extracted]), ALL('Decommissioning Apps') ) ) )RETURNIF( ISBLANK(TargetDate), 0, VAR StartOfMonthh = DATE(YEAR(TargetDate), MONTH(TargetDate), 1) VAR EndOfMonthh = EOMONTH(TargetDate, 0) VAR TargetYear = YEAR(TargetDate) /* Get list of IDs from Decommissioning Apps that match criteria */ VAR ValidIDs = CALCULATETABLE( VALUES('Decommissioning Apps'[ID]), 'Decommissioning Apps'[Date extracted] >= StartOfMonth, 'Decommissioning Apps'[Date extracted] <= EndOfMonth, YEAR('Decommissioning Apps'[Forecast End Date]) = TargetYear, 'Decommissioning Apps'[Phase] = "Completed" ) /* Count matching rows in IT Architecture table */ VAR Result_ = CALCULATE( COUNTROWS('IT Architecture'), 'IT Architecture'[Date extracted] >= StartOfMonth, 'IT Architecture'[Date extracted] <= EndOfMonth, 'IT Architecture'[ID] IN ValidIDs ) RETURN COALESCE(Result_, 0)))).
-    
-    RETURN COALESCE(Result_, 0)
+Completed Apps (Arch Count) :=
+VAR YearIsSel  = HASONEVALUE ( 'Calendar'[Year] )
+VAR MonthIsSel = HASONEVALUE ( 'Calendar'[Month] )
+
+-- Pick the “target extract date” based on slicers
+VAR TargetDate =
+    IF (
+        MonthIsSel,
+            CALCULATE (
+                MAX ( 'Decommissioning Apps'[Date extracted] ),
+                ALLEXCEPT ( 'Calendar', 'Calendar'[Year], 'Calendar'[Month] )
+            ),
+        IF (
+            YearIsSel,
+                CALCULATE (
+                    MAX ( 'Decommissioning Apps'[Date extracted] ),
+                    ALLEXCEPT ( 'Calendar', 'Calendar'[Year] )
+                ),
+            CALCULATE (
+                MAX ( 'Decommissioning Apps'[Date extracted] ),
+                ALL ( 'Decommissioning Apps' )
+            )
+        )
+    )
+
+RETURN
+IF (
+    ISBLANK ( TargetDate ),
+    0,
+    VAR StartOfMonth = DATE ( YEAR ( TargetDate ), MONTH ( TargetDate ), 1 )
+    VAR EndOfMonth   = EOMONTH ( TargetDate, 0 )
+
+    -- ✅ NEW: Forecast End Date should be anywhere in the selected YEAR
+    VAR StartOfYear = DATE ( YEAR ( TargetDate ), 1, 1 )
+    VAR EndOfYear   = DATE ( YEAR ( TargetDate ), 12, 31 )
+
+    VAR FilteredIDs =
+        CALCULATETABLE (
+            VALUES ( 'Decommissioning Apps'[ID_4] ),
+            'Decommissioning Apps'[Phase] = "Completed",
+
+            -- Step 3: Date extracted = selected month (based on TargetDate month)
+            'Decommissioning Apps'[Date extracted] >= StartOfMonth,
+            'Decommissioning Apps'[Date extracted] <= EndOfMonth,
+
+            -- ✅ Step 4: Forecast End Date = anywhere in that YEAR
+            'Decommissioning Apps'[Forecast End Date] >= StartOfYear,
+            'Decommissioning Apps'[Forecast End Date] <= EndOfYear
+        )
+
+    VAR Result =
+        CALCULATE (
+            COUNTROWS ( 'IT Architecture' ),
+            KEEPFILTERS ( TREATAS ( FilteredIDs, 'IT Architecture'[ID] ) )
+        )
+    RETURN COALESCE ( Result, 0 )
 )
