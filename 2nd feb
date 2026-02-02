@@ -137,3 +137,68 @@ IF (
         )
     RETURN COALESCE ( Result, 0 )
 )
+
+
+
+
+----------------------------------------------------------------------------
+
+
+Completed Apps (Arch Count) :=
+VAR YearIsSel  = HASONEVALUE ( 'Calendar'[Year] )
+VAR MonthIsSel = HASONEVALUE ( 'Calendar'[Month] )
+
+VAR TargetDate =
+    IF (
+        MonthIsSel,
+            CALCULATE (
+                MAX ( 'Decommissioning Apps'[Date extracted] ),
+                ALLEXCEPT ( 'Calendar', 'Calendar'[Year], 'Calendar'[Month] )
+            ),
+        IF (
+            YearIsSel,
+                CALCULATE (
+                    MAX ( 'Decommissioning Apps'[Date extracted] ),
+                    ALLEXCEPT ( 'Calendar', 'Calendar'[Year] )
+                ),
+                CALCULATE (
+                    MAX ( 'Decommissioning Apps'[Date extracted] ),
+                    ALL ( 'Decommissioning Apps' )
+                )
+        )
+    )
+
+RETURN
+IF (
+    ISBLANK ( TargetDate ),
+    0,
+    VAR StartOfMonth = DATE ( YEAR ( TargetDate ), MONTH ( TargetDate ), 1 )
+    VAR EndOfMonth   = EOMONTH ( TargetDate, 0 )
+
+    VAR StartOfYear = DATE ( YEAR ( TargetDate ), 1, 1 )
+    VAR EndOfYear   = DATE ( YEAR ( TargetDate ), 12, 31 )
+
+    VAR FilteredIDs =
+        CALCULATETABLE (
+            VALUES ( 'Decommissioning Apps'[ID_4] ),
+            'Decommissioning Apps'[Phase] = "Completed",
+            'Decommissioning Apps'[Date extracted] >= StartOfMonth,
+            'Decommissioning Apps'[Date extracted] <= EndOfMonth,
+            'Decommissioning Apps'[Forecast End Date] >= StartOfYear,
+            'Decommissioning Apps'[Forecast End Date] <= EndOfYear
+        )
+
+    VAR Result =
+        CALCULATE (
+            COUNTROWS ( 'IT Architecture' ),
+
+            -- ✅ Force Architecture to the SAME “latest extract month” even when slicers are blank
+            REMOVEFILTERS ( 'Calendar' ),
+            DATESBETWEEN ( 'Calendar'[Date], StartOfMonth, EndOfMonth ),
+
+            -- Match IDs from filtered decom list
+            KEEPFILTERS ( TREATAS ( FilteredIDs, 'IT Architecture'[ID] ) )
+        )
+    RETURN COALESCE ( Result, 0 )
+)
+
