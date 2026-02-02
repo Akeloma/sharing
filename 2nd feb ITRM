@@ -65,3 +65,26 @@ VAR result =
 
 RETURN
     COALESCE ( result, 0 )
+
+-----------------------------------------------------------
+
+
+Audit Matrix Output = 
+VAR SelStatus =
+    COALESCE (
+        SELECTEDVALUE ( StatusTable[Status] ),
+        SELECTEDVALUE ( tblAudit[Status] )
+    )
+VAR result = 
+    SWITCH (
+        TRUE(),
+        SelStatus = "Total IT Audit Findings",   CALCULATE(SUM(tblAudit[Count]), tblAudit[Status]="Total IT Audit Findings"),
+        SelStatus = "Remediated",       CALCULATE(SUM(tblAudit[Count]), tblAudit[Status]="Remediated"),
+        SelStatus = "Current Overdue" || SelStatus = "Current overdue",
+                                         CALCULATE(SUM(tblAudit[Count]), tblAudit[Status]="Current overdue"),
+        SelStatus = "YTD Remediated",   format([YTD Remediated audit %],"0%"), -- SHOW AS %
+        BLANK()
+    )
+RETURN COALESCE(result,0)
+
+
