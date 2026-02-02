@@ -1,0 +1,17 @@
+Compliance Matrix Output = 
+VAR SelStatus =
+    COALESCE (
+        SELECTEDVALUE ( StatusTable[Status] ),
+        SELECTEDVALUE ( tblCompliance[Status] )
+    )
+VAR result =
+    SWITCH (
+        TRUE(),
+        SelStatus = "Non-Compliance",   CALCULATE([Total Count], tblCompliance[Status]="Non-Compliance"),
+        SelStatus = "Remediated",       CALCULATE([Total Count], tblCompliance[Status]="Remediated"),
+        SelStatus = "Current Overdue" || SelStatus = "Current overdue",
+                                         CALCULATE([Total Count], tblCompliance[Status]="Current overdue"),
+        SelStatus = "YTD Remediated",   format([YTD Remediated %],"0%"), -- SHOW AS %
+        BLANK()
+    )
+RETURN COALESCE(result,0)
