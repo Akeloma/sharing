@@ -1,0 +1,22 @@
+Filter - Decommissioning Apps = 
+VAR SelectedYear = SELECTEDVALUE(YearParameter[Year])
+
+RETURN
+FILTER(
+    'Decommissioning Apps',
+    YEAR('Decommissioning Apps'[Forecast End Date]) = SelectedYear &&
+    'Decommissioning Apps'[Phase] = "Completed"
+)
+
+
+D = 
+CALCULATE(
+    COUNTROWS('Filter - Decommissioning Apps'),
+    FILTER(
+        'Filter - Decommissioning Apps',
+        'Filter - Decommissioning Apps'[ID_4] = 'IT Architecture'[ID]
+    )
+)
+
+
+DCount = SUM('IT Architecture'[D])+0
