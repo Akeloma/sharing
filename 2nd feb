@@ -24,17 +24,57 @@ DCount = SUM('IT Architecture'[D])+0
 
 
 
-Step by Step in Excel -
-1. Open Decommissioning Compiled file
-2. go to Date extracted column (Column BR)
-3. filter out the date we want to process (lets take Mar as an example)
-4. Filter out the dates from the 1st Mar - 31st Mar in Column Forecast End Date (Column N)
-5. Filter out 'Completed' in Column 'Phase' (Column O)
-6. Take note of the IDs (Column U)
-7. Open IT Architecture excel file, filter out the same date (March)
-8. Compare the ID values in IT Architecture Compiled file, Column ID (Column B)
-9. count number of rows. number should reflect under respective OE, eg. TH has 2 rows, so it will display 2.
+Decommissioned Apps Count = 
+VAR YearIsSel = HASONEVALUE('Calendar'[Year])
+VAR MonthIsSel = HASONEVALUE('Calendar'[Month])
 
+/* Pick a single target date based on slicers */
+VAR TargetDate = 
+    IF(
+        MonthIsSel,
+        CALCULATE(
+            MAX('Decommissioning Apps'[Date extracted]),
+            ALLEXCEPT('Calendar', 'Calendar'[Year], 'Calendar'[Month])
+        ),
+        IF(
+            YearIsSel,
+            CALCULATE(
+                MAX('Decommissioning Apps'[Date extracted]),
+                ALLEXCEPT('Calendar', 'Calendar'[Year])
+            ),
+            CALCULATE(
+                MAX('Decommissioning Apps'[Date extracted]),
+                ALL('Decommissioning Apps')
+            )
         )
+    )
+
+RETURN
+IF(
+    ISBLANK(TargetDate),
+    0,
+    VAR StartOfMonth = DATE(YEAR(TargetDate), MONTH(TargetDate), 1)
+    VAR EndOfMonth = EOMONTH(TargetDate, 0)
+    VAR TargetYear = YEAR(TargetDate)
+    
+    /* Get list of IDs from Decommissioning Apps that match criteria */
+    VAR ValidIDs = 
+        CALCULATETABLE(
+            VALUES('Decommissioning Apps'[ID]),
+            'Decommissioning Apps'[Date extracted] >= StartOfMonth,
+            'Decommissioning Apps'[Date extracted] <= EndOfMonth,
+            YEAR('Decommissioning Apps'[Forecast End Date]) = TargetYear,
+            'Decommissioning Apps'[Phase] = "Completed"
+        )
+    
+    /* Count matching rows in IT Architecture table */
+    VAR Result_ = 
+        CALCULATE(
+            COUNTROWS('IT Architecture'),
+            'IT Architecture'[Date extracted] >= StartOfMonth,
+            'IT Architecture'[Date extracted] <= EndOfMonth,
+            'IT Architecture'[ID] IN ValidIDs
+        )
+    
     RETURN COALESCE(Result_, 0)
 )
