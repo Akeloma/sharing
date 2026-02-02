@@ -88,3 +88,56 @@ VAR result =
 RETURN COALESCE(result,0)
 
 
+
+-------------------------------------------
+
+Audit Matrix Output =
+VAR SelStatus =
+    COALESCE (
+        SELECTEDVALUE ( StatusTable[Status] ),
+        SELECTEDVALUE ( tblAudit[Status] )
+    )
+
+-- Shift the slicer context back by 1 month
+VAR PrevMonthDates =
+    DATEADD ( 'Calendar'[Date], -1, MONTH )
+
+VAR result =
+    SWITCH (
+        TRUE (),
+
+        SelStatus = "Total IT Audit Findings",
+            CALCULATE (
+                SUM ( tblAudit[Count] ),
+                PrevMonthDates,
+                tblAudit[Status] = "Total IT Audit Findings"
+            ),
+
+        SelStatus = "Remediated",
+            CALCULATE (
+                SUM ( tblAudit[Count] ),
+                PrevMonthDates,
+                tblAudit[Status] = "Remediated"
+            ),
+
+        SelStatus = "Current Overdue" || SelStatus = "Current overdue",
+            CALCULATE (
+                SUM ( tblAudit[Count] ),
+                PrevMonthDates,
+                tblAudit[Status] = "Current overdue"
+            ),
+
+        SelStatus = "YTD Remediated",
+            FORMAT (
+                CALCULATE ( [YTD Remediated audit %], PrevMonthDates ),
+                "0%"
+            ),
+
+        BLANK ()
+    )
+
+RETURN
+    COALESCE ( result, 0 )
+
+
+
