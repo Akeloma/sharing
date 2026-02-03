@@ -1,0 +1,98 @@
+CompletedCountneww = 
+VAR YearIsSel  = HASONEVALUE ( 'Calendar'[Year] )
+VAR MonthIsSel = HASONEVALUE ( 'Calendar'[Month] )
+VAR NoneSelected = NOT YearIsSel && NOT MonthIsSel
+ 
+/* Target date from slicer */
+VAR TargetDateFromSlicer =
+    IF (
+        MonthIsSel,
+        CALCULATE (
+            MAX ( 'Calendar'[Date] ),
+            ALLEXCEPT ( 'Calendar', 'Calendar'[Year], 'Calendar'[Month] )
+        ),
+        IF (
+            YearIsSel,
+            CALCULATE (
+                MAX ( 'Calendar'[Date] ),
+                ALLEXCEPT ( 'Calendar', 'Calendar'[Year] )
+            )
+        )
+    )
+ 
+/* Latest snapshot respecting Country / Entity */
+VAR LatestExtractDate =
+    CALCULATE (
+        MAX ( 'Decommissioning Apps'[Date extracted] ),
+        REMOVEFILTERS ( 'Calendar' )
+    )
+ 
+/* Month window */
+VAR ExtractMonthStart =
+    IF (
+        MonthIsSel,
+        DATE ( YEAR ( TargetDateFromSlicer ), MONTH ( TargetDateFromSlicer ), 1 ),
+        DATE ( YEAR ( LatestExtractDate ), MONTH ( LatestExtractDate ), 1 )
+    )
+ 
+VAR ExtractMonthEnd =
+    IF (
+        MonthIsSel,
+        EOMONTH ( TargetDateFromSlicer, 0 ),
+        EOMONTH ( LatestExtractDate, 0 )
+    )
+ 
+/* Year logic */
+VAR ForecastYear =
+    IF (
+        YearIsSel || MonthIsSel,
+        YEAR ( TargetDateFromSlicer ),
+        YEAR ( LatestExtractDate )
+    )
+ 
+/* Year-only: latest extract month within year, respecting Country */
+VAR LatestExtractInYear =
+    CALCULATE (
+        MAX ( 'Decommissioning Apps'[Date extracted] ),
+        REMOVEFILTERS ( 'Calendar' ),
+        YEAR ( 'Decommissioning Apps'[Date extracted] ) = ForecastYear
+    )
+ 
+VAR YearOnlyExtractStart =
+    DATE ( ForecastYear, MONTH ( LatestExtractInYear ), 1 )
+ 
+VAR YearOnlyExtractEnd =
+    EOMONTH ( LatestExtractInYear, 0 )
+ 
+RETURN
+IF (
+    MonthIsSel || NoneSelected,
+    CALCULATE (
+        COUNTROWS ( 'Decommissioning Apps' ),
+        'Decommissioning Apps'[Phase] = "Completed",
+        DATESBETWEEN (
+            'Decommissioning Apps'[Date extracted],
+            ExtractMonthStart,
+            ExtractMonthEnd
+        ),
+        DATESBETWEEN (
+            'Decommissioning Apps'[Forecast end Date],
+            DATE ( ForecastYear, 1, 1 ),
+            DATE ( ForecastYear, 12, 31 )
+        )
+    ),
+    CALCULATE (
+        COUNTROWS ( 'Decommissioning Apps' ),
+        'Decommissioning Apps'[Phase] = "Completed",
+        DATESBETWEEN (
+            'Decommissioning Apps'[Date extracted],
+            YearOnlyExtractStart,
+            YearOnlyExtractEnd
+        ),
+        DATESBETWEEN (
+            'Decommissioning Apps'[Forecast end Date],
+            DATE ( ForecastYear, 1, 1 ),
+            DATE ( ForecastYear, 12, 31 )
+        )
+    )
+)+0
