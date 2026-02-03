@@ -212,58 +212,112 @@ IF (
     )
 )
 ------------------------------------------------
-InProgressForDetails = 
-VAR YearIsSel = HASONEVALUE ( 'Calendar'[Year] ) 
-VAR MonthIsSel = HASONEVALUE ( 'Calendar'[Month] ) 
-VAR NoneSelected = NOT YearIsSel && NOT MonthIsSel 
+InProgressForDetails =
+VAR YearIsSel  = HASONEVALUE ( 'Calendar'[Year] )
+VAR MonthIsSel = HASONEVALUE ( 'Calendar'[Month] )
+VAR NoneSelected = NOT YearIsSel && NOT MonthIsSel
 
-/* Shift Target date from slicer to PREVIOUS month */ 
-VAR TargetDateFromSlicer = 
-    IF ( 
-        MonthIsSel, 
-        CALCULATE ( 
-            EDATE( MAX ( 'Calendar'[Date] ), -1 ), // Subtract 1 month
-            ALLEXCEPT ( 'Calendar', 'Calendar'[Year], 'Calendar'[Month] ) 
-        ), 
-        IF ( 
-            YearIsSel, 
-            CALCULATE ( 
-                EDATE( MAX ( 'Calendar'[Date] ), -1 ), // Subtract 1 month
-                ALLEXCEPT ( 'Calendar', 'Calendar'[Year] ) 
-            ) 
-        ) 
-    ) 
+/* Target date from slicer (selected month/year anchor) */
+VAR TargetDateFromSlicer =
+    IF (
+        MonthIsSel,
+        CALCULATE (
+            MAX ( 'Calendar'[Date] ),
+            ALLEXCEPT ( 'Calendar', 'Calendar'[Year], 'Calendar'[Month] )
+        ),
+        IF (
+            YearIsSel,
+            CALCULATE (
+                MAX ( 'Calendar'[Date] ),
+                ALLEXCEPT ( 'Calendar', 'Calendar'[Year] )
+            )
+        )
+    )
 
-/* Latest snapshot overall */ 
-VAR LatestExtractDate = CALCULATE ( MAX ( 'Decommissioning Apps'[Date extracted] ), ALL ( 'Decommissioning Apps' ) ) 
+/* Previous-month anchor (this is the key change) */
+VAR PrevMonthAnchorDate =
+    IF ( MonthIsSel, EOMONTH ( TargetDateFromSlicer, -1 ), BLANK () )
 
-/* Month window for Date extracted - logic remains the same, but uses shifted TargetDate */ 
-VAR ExtractMonthStart = IF ( MonthIsSel, DATE ( YEAR ( TargetDateFromSlicer ), MONTH ( TargetDateFromSlicer ), 1 ), DATE ( YEAR ( LatestExtractDate ), MONTH ( LatestExtractDate ), 1 ) ) 
-VAR ExtractMonthEnd = IF ( MonthIsSel, EOMONTH ( TargetDateFromSlicer, 0 ), EOMONTH ( LatestExtractDate, 0 ) ) 
+/* Latest snapshot overall */
+VAR LatestExtractDate =
+    CALCULATE (
+        MAX ( 'Decommissioning Apps'[Date extracted] ),
+        ALL ( 'Decommissioning Apps' )
+    )
 
-/* Year logic */ 
-VAR ForecastYear = IF ( YearIsSel || MonthIsSel, YEAR ( TargetDateFromSlicer ), YEAR ( LatestExtractDate ) ) 
+/* Month window for Date extracted
+   - If month selected: use previous month window
+   - Else: use latest extract month window (same as before)
+*/
+VAR ExtractMonthStart =
+    IF (
+        MonthIsSel,
+        DATE ( YEAR ( PrevMonthAnchorDate ), MONTH ( PrevMonthAnchorDate ), 1 ),
+        DATE ( YEAR ( LatestExtractDate ), MONTH ( LatestExtractDate ), 1 )
+    )
 
-/* Year-only: latest extract month in that year */ 
-VAR LatestExtractInYear = CALCULATE ( MAX ( 'Decommissioning Apps'[Date extracted] ), FILTER ( ALL ( 'Decommissioning Apps' ), YEAR ( 'Decommissioning Apps'[Date extracted] ) = ForecastYear ) ) 
-VAR YearOnlyExtractStart = DATE ( ForecastYear, MONTH ( LatestExtractInYear ), 1 ) 
-VAR YearOnlyExtractEnd = EOMONTH ( LatestExtractInYear, 0 ) 
+VAR ExtractMonthEnd =
+    IF (
+        MonthIsSel,
+        EOMONTH ( PrevMonthAnchorDate, 0 ),
+        EOMONTH ( LatestExtractDate, 0 )
+    )
 
-RETURN 
-IF ( 
-    MonthIsSel || NoneSelected, 
-    /* Month selected OR nothing selected */ 
-    CALCULATE ( 
-        COUNTROWS ( 'Decommissioning Apps' ), 
-        'Decommissioning Apps'[Phase] IN { "Baselining", "Not Started", "No entry" }, 
-        DATESBETWEEN ( 'Decommissioning Apps'[Date extracted], ExtractMonthStart, ExtractMonthEnd ), 
-        DATESBETWEEN ( 'Decommissioning Apps'[Forecast end Date], DATE ( ForecastYear, 1, 1 ), DATE ( ForecastYear, 12, 31 ) ) 
-    ), 
-    /* Only year selected */ 
-    CALCULATE ( 
-        COUNTROWS ( 'Decommissioning Apps' ), 
-        'Decommissioning Apps'[Phase] IN { "Baselining", "Not Started", "No entry" }, 
-        DATESBETWEEN ( 'Decommissioning Apps'[Date extracted], YearOnlyExtractStart, YearOnlyExtractEnd ), 
-        DATESBETWEEN ( 'Decommissioning Apps'[Forecast end Date], DATE ( ForecastYear, 1, 1 ), DATE ( ForecastYear, 12, 31 ) ) 
-    ) 
+/* Forecast year: keep it based on slicer selection (NOT shifted) */
+VAR ForecastYear =
+    IF (
+        YearIsSel || MonthIsSel,
+        YEAR ( TargetDateFromSlicer ),
+        YEAR ( LatestExtractDate )
+    )
+
+/* Year-only: latest extract month in that selected year (unchanged) */
+VAR LatestExtractInYear =
+    CALCULATE (
+        MAX ( 'Decommissioning Apps'[Date extracted] ),
+        FILTER (
+            ALL ( 'Decommissioning Apps' ),
+            YEAR ( 'Decommissioning Apps'[Date extracted] ) = ForecastYear
+        )
+    )
+
+VAR YearOnlyExtractStart =
+    DATE ( ForecastYear, MONTH ( LatestExtractInYear ), 1 )
+
+VAR YearOnlyExtractEnd =
+    EOMONTH ( LatestExtractInYear, 0 )
+
+RETURN
+IF (
+    MonthIsSel || NoneSelected,
+    /* Month selected OR nothing selected */
+    CALCULATE (
+        COUNTROWS ( 'Decommissioning Apps' ),
+        'Decommissioning Apps'[Phase] IN { "Baselining", "Not Started", "No entry" },
+        DATESBETWEEN (
+            'Decommissioning Apps'[Date extracted],
+            ExtractMonthStart,
+            ExtractMonthEnd
+        ),
+        DATESBETWEEN (
+            'Decommissioning Apps'[Forecast end Date],
+            DATE ( ForecastYear, 1, 1 ),
+            DATE ( ForecastYear, 12, 31 )
+        )
+    ),
+    /* Only year selected */
+    CALCULATE (
+        COUNTROWS ( 'Decommissioning Apps' ),
+        'Decommissioning Apps'[Phase] IN { "Baselining", "Not Started", "No entry" },
+        DATESBETWEEN (
+            'Decommissioning Apps'[Date extracted],
+            YearOnlyExtractStart,
+            YearOnlyExtractEnd
+        ),
+        DATESBETWEEN (
+            'Decommissioning Apps'[Forecast end Date],
+            DATE ( ForecastYear, 1, 1 ),
+            DATE ( ForecastYear, 12, 31 )
+        )
+    )
 )
