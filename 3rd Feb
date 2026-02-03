@@ -62,3 +62,11 @@ IF (
     0
 )
 
+
+--------------------
+
+PreviousMonthTable = 
+CALCULATETABLE(
+    Sheet1,
+    DATEADD('Calendar'[Date], -1, MONTH)
+)
