@@ -181,5 +181,79 @@ VAR LOCAL_ =
 RETURN
     FORMAT(GROUP_, "0") & " / " & FORMAT(LOCAL_, "0")
 
+---------------------------------------------
+
+FLT_New_Landing_page (Prev Month) =
+VAR YearIsSel  = HASONEVALUE ( 'Calendar'[Year] )
+VAR MonthIsSel = HASONEVALUE ( 'Calendar'[Month] )
+
+/* Anchor date from slicer */
+VAR SlicerAnchorDate =
+    IF (
+        MonthIsSel,
+        CALCULATE (
+            MAX ( 'Calendar'[Date] ),
+            ALLEXCEPT ( 'Calendar', 'Calendar'[Year], 'Calendar'[Month] )
+        ),
+        IF (
+            YearIsSel,
+            CALCULATE (
+                MAX ( 'Calendar'[Date] ),
+                ALLEXCEPT ( 'Calendar', 'Calendar'[Year] )
+            ),
+            BLANK ()
+        )
+    )
+
+/* Shift back 1 month if month is selected */
+VAR PrevMonthAnchor =
+    IF ( MonthIsSel, EOMONTH ( SlicerAnchorDate, -1 ), BLANK () )
+
+/* Decide one “target” date based on the slicers */
+VAR TargetDate =
+    IF (
+        MonthIsSel,
+        PrevMonthAnchor,   -- ✅ month selected -> previous month
+        IF (
+            YearIsSel,
+            -- only year selected -> latest Toxic Remediation date within that year
+            CALCULATE (
+                MAX ( 'Toxic Remediation'[Date] ),
+                FILTER (
+                    ALL ( 'Toxic Remediation' ),
+                    YEAR ( 'Toxic Remediation'[Date] ) = YEAR ( SlicerAnchorDate )
+                )
+            ),
+            -- nothing selected -> latest date overall
+            CALCULATE ( MAX ( 'Toxic Remediation'[Date] ), ALL ( 'Toxic Remediation' ) )
+        )
+    )
+
+VAR TargetYear = YEAR ( TargetDate )
+
+/* Build month window around TargetDate */
+VAR StartOfMonth = DATE ( YEAR ( TargetDate ), MONTH ( TargetDate ), 1 )
+VAR EndOfMonth   = EOMONTH ( TargetDate, 0 )
+
+/* Compute values for the chosen month window */
+VAR GROUP_ =
+    CALCULATE (
+        SUM ( 'Toxic Remediation'[Number of IT Assets] ),
+        FILTER ( 'Toxic Remediation', YEAR ( 'Toxic Remediation'[Toxic from Date] ) = TargetYear ),
+        'Toxic Remediation'[Current Status] = "Forward Looking Toxic",
+        'Toxic Remediation'[IT Component Type] = "Group",
+        DATESBETWEEN ( 'Calendar'[Date], StartOfMonth, EndOfMonth )
+    ) + 0
+
+VAR LOCAL_ =
+    CALCULATE (
+        SUM ( 'Toxic Remediation'[Number of IT Assets] ),
+        FILTER ( 'Toxic Remediation', YEAR ( 'Toxic Remediation'[Toxic from Date] ) = TargetYear ),
+        'Toxic Remediation'[Current Status] = "Forward Looking Toxic",
+        'Toxic Remediation'[IT Component Type] = "Regional/Local",
+        DATESBETWEEN ( 'Calendar'[Date], StartOfMonth, EndOfMonth )
+    ) + 0
+
 RETURN
     FORMAT ( GROUP_, "0" ) & " / " & FORMAT ( LOCAL_, "0" )
+
