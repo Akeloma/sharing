@@ -118,6 +118,9 @@ VAR LOCAL_ =
         DATESBETWEEN ( 'Calendar'[Date], StartOfMonth, EndOfMonth )
     ) + 0
 
+RETURN
+    FORMAT ( GROUP_, "0" ) & " / " & FORMAT ( LOCAL_, "0" )
+
 ---------------------------------------------------------------------------------
 FLT_New_Landing_page = 
 VAR YearIsSel  = HASONEVALUE('Calendar'[Year])
