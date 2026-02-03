@@ -1,1 +1,29 @@
 hi i have this table, it's a normal table in Power BI, its a normal text table, no calculations included. but i want to add this thing whereby, if i choose Jan 2026 on the calendar slicer, i will see the data from the previous month, which is Dec 2025. so i just need to see the previous month's data. The table name is Sheet1. Sheet1[Date] has a relationship with my Calendar[Date].  
+
+
+Show_PreviousMonth_Rows =
+VAR HasCalendarFilter =
+    ISCROSSFILTERED ( 'Calendar' )  -- true when slicer filters Calendar
+
+-- Uses whatever the slicer is currently filtering to get a reference date
+VAR SelectedMaxDate =
+    MAX ( 'Calendar'[Date] )
+
+-- Previous month window (start to end)
+VAR PrevMonthEnd =
+    EOMONTH ( SelectedMaxDate, -1 )
+VAR PrevMonthStart =
+    DATE ( YEAR ( PrevMonthEnd ), MONTH ( PrevMonthEnd ), 1 )
+
+-- Date for the current row in the table
+VAR RowDate =
+    MAX ( Sheet1[Date] )
+
+RETURN
+IF (
+    HasCalendarFilter
+        && RowDate >= PrevMonthStart
+        && RowDate <= PrevMonthEnd,
+    1,
+    0
+)
