@@ -37,3 +37,85 @@ IF(
         )
     RETURN COALESCE(Result_, 0)
 )
+---------------------------------------------------------
+
+InProgressForDetails =
+VAR YearIsSel  = HASONEVALUE ( 'Calendar'[Year] )
+VAR MonthIsSel = HASONEVALUE ( 'Calendar'[Month] )
+VAR NoneSelected = NOT YearIsSel && NOT MonthIsSel
+
+/* 1) Anchor date from slicer (end of selected month/year) */
+VAR SlicerAnchorDate =
+    IF (
+        MonthIsSel,
+        CALCULATE (
+            MAX ( 'Calendar'[Date] ),
+            ALLEXCEPT ( 'Calendar', 'Calendar'[Year], 'Calendar'[Month] )
+        ),
+        IF (
+            YearIsSel,
+            CALCULATE (
+                MAX ( 'Calendar'[Date] ),
+                ALLEXCEPT ( 'Calendar', 'Calendar'[Year] )
+            ),
+            BLANK ()
+        )
+    )
+
+/* 2) Latest extract overall */
+VAR LatestExtractOverall =
+    CALCULATE ( MAX ( 'Decommissioning Apps'[Date extracted] ), ALL ( 'Decommissioning Apps' ) )
+
+/* 3) If month is selected, we want previous month */
+VAR PrevMonthDate =
+    EOMONTH ( SlicerAnchorDate, -1 )   -- Jan 2026 -> Dec 2025
+
+/* 4) Decide which year we filter Forecast end Date by */
+VAR ForecastYear =
+    IF (
+        MonthIsSel,
+        YEAR ( PrevMonthDate ),
+        IF ( YearIsSel, YEAR ( SlicerAnchorDate ), YEAR ( LatestExtractOverall ) )
+    )
+
+/* 5) Pick the extract anchor that will define the Date extracted window */
+VAR ExtractAnchor =
+    IF (
+        MonthIsSel,
+        PrevMonthDate,                      -- previous month
+        IF (
+            YearIsSel,
+            CALCULATE (                      -- latest extract month within selected year
+                MAX ( 'Decommissioning Apps'[Date extracted] ),
+                FILTER (
+                    ALL ( 'Decommissioning Apps' ),
+                    YEAR ( 'Decommissioning Apps'[Date extracted] ) = ForecastYear
+                )
+            ),
+            LatestExtractOverall              -- no selection -> latest overall
+        )
+    )
+
+/* 6) If selected year has no data -> return 0 */
+VAR HasDataForYear =
+    IF ( YearIsSel || MonthIsSel, NOT ISBLANK ( ExtractAnchor ), TRUE )
+
+VAR ExtractStart = DATE ( YEAR ( ExtractAnchor ), MONTH ( ExtractAnchor ), 1 )
+VAR ExtractEnd   = EOMONTH ( ExtractAnchor, 0 )
+
+RETURN
+IF (
+    NOT HasDataForYear,
+    0,
+    CALCULATE (
+        COUNTROWS ( 'Decommissioning Apps' ),
+        REMOVEFILTERS ( 'Calendar' ),
+        'Decommissioning Apps'[Phase] IN { "Baselining", "Not Started", "No entry" },
+        DATESBETWEEN ( 'Decommissioning Apps'[Date extracted], ExtractStart, ExtractEnd ),
+        DATESBETWEEN (
+            'Decommissioning Apps'[Forecast end Date],
+            DATE ( ForecastYear, 1, 1 ),
+            DATE ( ForecastYear, 12, 31 )
+        )
+    ) + 0
+)
