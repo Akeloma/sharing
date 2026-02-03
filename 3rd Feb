@@ -27,3 +27,38 @@ IF (
     1,
     0
 )
+
+
+------------------------------------------
+
+Show_PreviousMonth_Rows =
+VAR YearSel  = SELECTEDVALUE ( 'Calendar'[Year] )
+VAR MonthSel = SELECTEDVALUE ( 'Calendar'[MonthNo] )   -- 1..12
+
+-- Only proceed when exactly 1 Year AND 1 Month are selected
+VAR HasSingleMonth =
+    NOT ISBLANK ( YearSel ) && NOT ISBLANK ( MonthSel )
+
+-- Build a date for the selected month (any day is fine; use 1st)
+VAR SelectedMonthDate =
+    DATE ( YearSel, MonthSel, 1 )
+
+-- Previous month window
+VAR PrevMonthStart =
+    EOMONTH ( SelectedMonthDate, -2 ) + 1
+VAR PrevMonthEnd =
+    EOMONTH ( SelectedMonthDate, -1 )
+
+-- Current row’s date in the table
+VAR RowDate =
+    MAX ( Sheet1[Date] )
+
+RETURN
+IF (
+    HasSingleMonth
+        && RowDate >= PrevMonthStart
+        && RowDate <= PrevMonthEnd,
+    1,
+    0
+)
+
