@@ -65,8 +65,27 @@ IF (
 
 --------------------
 
-PreviousMonthTable = 
+Previous Month Filter = 
 CALCULATETABLE(
-    Sheet1,
+    VALUES(Sheet1[Date]),
+    DATEADD('Calendar'[Date], -1, MONTH)
+)
+
+Class 1 Standard Solution (PM) = 
+CALCULATE(
+    SELECTEDVALUE(Sheet1[Class 1 Standard Solution]),
+    DATEADD('Calendar'[Date], -1, MONTH)
+)
+
+
+AZCN (PM) = 
+CALCULATE(
+    SELECTEDVALUE(Sheet1[AZCN]),
+    DATEADD('Calendar'[Date], -1, MONTH)
+)
+
+AZID (PM) = 
+CALCULATE(
+    SELECTEDVALUE(Sheet1[AZID]),
     DATEADD('Calendar'[Date], -1, MONTH)
 )
