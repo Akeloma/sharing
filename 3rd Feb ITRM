@@ -1,0 +1,39 @@
+IT Audit Findings (Selected Month) = 
+VAR YearIsSel  = HASONEVALUE('Calendar'[Year])
+VAR MonthIsSel = HASONEVALUE('Calendar'[Month])
+
+/* Pick a single target date based on slicers */
+VAR TargetDate =
+    IF(
+        MonthIsSel,
+        CALCULATE(
+            MAX('tblAudit'[Date extracted]),
+            ALLEXCEPT('Calendar', 'Calendar'[Year], 'Calendar'[Month])
+        ),
+        IF(
+            YearIsSel,
+            CALCULATE(
+                MAX('tblAudit'[Date extracted]),
+                ALLEXCEPT('Calendar', 'Calendar'[Year])
+            ),
+            CALCULATE(
+                MAX('tblAudit'[Date extracted]),
+                ALL('tblAudit')
+            )
+        )
+    )
+
+RETURN
+IF(
+    ISBLANK(TargetDate),
+    0,
+    VAR StartOfMonthh = DATE(YEAR(TargetDate), MONTH(TargetDate), 1)
+    VAR EndOfMonthh   = EOMONTH(TargetDate, 0)
+    VAR Result_ =
+        CALCULATE(
+            SUM('tblAudit'[Count]),
+            KEEPFILTERS('tblAudit'[Status] = "Total IT Audit Findings"),
+            DATESBETWEEN('Calendar'[Date], StartOfMonthh, EndOfMonthh)
+        )
+    RETURN COALESCE(Result_, 0)
+)
