@@ -338,6 +338,59 @@ RETURN
     FORMAT ( GROUP_, "0" ) & " / " & FORMAT ( LOCAL_, "0" )
 
 
+-----------------------------------------------------------------
+
+FLT_New_Landing_page = 
+VAR YearIsSel  = HASONEVALUE('Calendar'[Year])
+VAR MonthIsSel = HASONEVALUE('Calendar'[Month])
+/* Decide one "target" date based on the slicers */
+VAR TargetDate =
+    IF(
+        MonthIsSel,
+        // A month is selected: take the max date within that selected year+month
+        CALCULATE(
+            MAX('Calendar'[Date]),
+            ALLEXCEPT('Calendar', 'Calendar'[Year], 'Calendar'[Month])
+        ),
+        IF(
+            YearIsSel,
+            // Only a year is selected: take the max date within that selected year
+            CALCULATE(
+                MAX('Toxic Remediation'[Date]),
+                ALLEXCEPT('Calendar', 'Calendar'[Year])
+            ),
+            // Nothing selected: take the max date across the full calendar
+            CALCULATE(
+                MAX('Toxic Remediation'[Date]),
+                ALL('Toxic Remediation')
+            )
+        )
+    )
+VAR TargetYear = YEAR(TargetDate)
+/* Build month window around PREVIOUS MONTH from TargetDate */
+VAR StartOfMonthh = EOMONTH(TargetDate, -2) + 1  // First day of previous month
+VAR EndOfMonthh   = EOMONTH(TargetDate, -1)      // Last day of previous month
+/* Compute values for the chosen month window */
+VAR GROUP_ =
+    CALCULATE(
+        SUM('Toxic Remediation'[Number of IT Assets]),
+        FILTER(
+            'Toxic Remediation',
+            YEAR('Toxic Remediation'[Toxic from Date]) = TargetYear),
+        'Toxic Remediation'[Current Status] = "Forward Looking Toxic",
+        'Toxic Remediation'[IT Component Type] = "Group",
+        DATESBETWEEN('Calendar'[Date], StartOfMonthh, EndOfMonthh)
+    ) + 0
+VAR LOCAL_ =
+    CALCULATE(
+        SUM('Toxic Remediation'[Number of IT Assets]),
+        FILTER(
+            'Toxic Remediation',
+            YEAR('Toxic Remediation'[Toxic from Date]) = TargetYear),
+        'Toxic Remediation'[Current Status] = "Forward Looking Toxic",
+        'Toxic Remediation'[IT Component Type] = "Regional/Local",
+        DATESBETWEEN('Calendar'[Date], StartOfMonthh, EndOfMonthh)
+    ) + 0
 RETURN
-    FORMAT ( GROUP_, "0" ) & " / " & FORMAT ( LOCAL_, "0" )
+    FORMAT(GROUP_, "0") & " / " & FORMAT(LOCAL_, "0")
 
