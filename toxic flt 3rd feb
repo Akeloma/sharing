@@ -1,0 +1,61 @@
+FLT_New_Landing_page_PrevMonth = 
+VAR YearIsSel  = HASONEVALUE('Calendar'[Year])
+VAR MonthIsSel = HASONEVALUE('Calendar'[Month])
+
+/* 1. Get the current selected date based on slicers */
+VAR SelectedDate = 
+    IF(
+        MonthIsSel,
+        CALCULATE(
+            MAX('Calendar'[Date]),
+            ALLEXCEPT('Calendar', 'Calendar'[Year], 'Calendar'[Month])
+        ),
+        IF(
+            YearIsSel,
+            CALCULATE(
+                MAX('Toxic Remediation'[Date]),
+                ALLEXCEPT('Calendar', 'Calendar'[Year])
+            ),
+            CALCULATE(
+                MAX('Toxic Remediation'[Date]),
+                ALL('Toxic Remediation')
+            )
+        )
+    )
+
+/* 2. SHIFT LOGIC: Move the TargetDate back by 1 month */
+VAR TargetDate = EDATE(SelectedDate, -1)
+
+VAR TargetYear = YEAR(TargetDate)
+
+/* 3. Build month window around the NEW shifted TargetDate */
+VAR StartOfMonthh = DATE(YEAR(TargetDate), MONTH(TargetDate), 1)
+VAR EndOfMonthh   = EOMONTH(TargetDate, 0)
+
+/* 4. Compute values using the shifted window */
+VAR GROUP_ = 
+    CALCULATE(
+        SUM('Toxic Remediation'[Number of IT Assets]),
+        FILTER(
+            ALL('Toxic Remediation'), -- Use ALL to ensure we aren't limited by current month filter context
+            YEAR('Toxic Remediation'[Toxic from Date]) = TargetYear
+        ),
+        'Toxic Remediation'[Current Status] = "Forward Looking Toxic",
+        'Toxic Remediation'[IT Component Type] = "Group",
+        DATESBETWEEN('Calendar'[Date], StartOfMonthh, EndOfMonthh)
+    ) + 0
+
+VAR LOCAL_ = 
+    CALCULATE(
+        SUM('Toxic Remediation'[Number of IT Assets]),
+        FILTER(
+            ALL('Toxic Remediation'),
+            YEAR('Toxic Remediation'[Toxic from Date]) = TargetYear
+        ),
+        'Toxic Remediation'[Current Status] = "Forward Looking Toxic",
+        'Toxic Remediation'[IT Component Type] = "Regional/Local",
+        DATESBETWEEN('Calendar'[Date], StartOfMonthh, EndOfMonthh)
+    ) + 0
+
+RETURN
+FORMAT(GROUP_, "0") & " / " & FORMAT(LOCAL_, "0")
