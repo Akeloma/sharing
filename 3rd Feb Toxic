@@ -8,8 +8,8 @@ VAR TargetDate =
         MonthIsSel,
         // A month is selected: take the max date within that selected year+month
         CALCULATE(
-            MAX('Toxic Remediation'[Date]),
-            ALLEXCEPT('Calendar', 'Calendar'[Year],'Calendar'[Month])
+            MAX('Calendar'[Date]),
+            ALLEXCEPT('Calendar', 'Calendar'[Year], 'Calendar'[Month])
         ),
         IF(
             YearIsSel,
@@ -27,8 +27,8 @@ VAR TargetDate =
     )
 
 /* Build month window around TargetDate */
-VAR StartOfMonthh = DATE(YEAR(TargetDate), MONTH(TargetDate)-1, 1)
-VAR EndOfMonthh   = EOMONTH(TargetDate, -1)
+VAR StartOfMonthh = DATE(YEAR(TargetDate), MONTH(TargetDate), 1)
+VAR EndOfMonthh   = EOMONTH(TargetDate, 0)
 
 /* Compute values for the chosen month window */
 VAR GROUP_ =
