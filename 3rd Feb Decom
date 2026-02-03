@@ -96,3 +96,114 @@ IF (
         )
     )
 )+0
+
+---------------------------------
+CompletedCountneww (Prev Month) =
+VAR YearIsSel  = HASONEVALUE ( 'Calendar'[Year] )
+VAR MonthIsSel = HASONEVALUE ( 'Calendar'[Month] )
+VAR NoneSelected = NOT YearIsSel && NOT MonthIsSel
+
+/* Target date from slicer */
+VAR TargetDateFromSlicer =
+    IF (
+        MonthIsSel,
+        CALCULATE (
+            MAX ( 'Calendar'[Date] ),
+            ALLEXCEPT ( 'Calendar', 'Calendar'[Year], 'Calendar'[Month] )
+        ),
+        IF (
+            YearIsSel,
+            CALCULATE (
+                MAX ( 'Calendar'[Date] ),
+                ALLEXCEPT ( 'Calendar', 'Calendar'[Year] )
+            )
+        )
+    )
+
+/* Previous month anchor (only when month is selected) */
+VAR PrevMonthAnchor =
+    IF ( MonthIsSel, EOMONTH ( TargetDateFromSlicer, -1 ), BLANK () )
+
+/* Latest snapshot respecting Country / Entity */
+VAR LatestExtractDate =
+    CALCULATE (
+        MAX ( 'Decommissioning Apps'[Date extracted] ),
+        REMOVEFILTERS ( 'Calendar' )
+    )
+
+/* Month window (shift to previous month if month selected) */
+VAR ExtractMonthStart =
+    IF (
+        MonthIsSel,
+        DATE ( YEAR ( PrevMonthAnchor ), MONTH ( PrevMonthAnchor ), 1 ),
+        DATE ( YEAR ( LatestExtractDate ), MONTH ( LatestExtractDate ), 1 )
+    )
+
+VAR ExtractMonthEnd =
+    IF (
+        MonthIsSel,
+        EOMONTH ( PrevMonthAnchor, 0 ),
+        EOMONTH ( LatestExtractDate, 0 )
+    )
+
+/* Year logic for Forecast end Date
+   - Month selected: previous month’s year (Jan 2026 -> 2025)
+   - Year only: selected year
+   - None: latest extract year
+*/
+VAR ForecastYear =
+    IF (
+        MonthIsSel,
+        YEAR ( PrevMonthAnchor ),
+        IF ( YearIsSel, YEAR ( TargetDateFromSlicer ), YEAR ( LatestExtractDate ) )
+    )
+
+/* Year-only: latest extract month within year, respecting Country */
+VAR LatestExtractInYear =
+    CALCULATE (
+        MAX ( 'Decommissioning Apps'[Date extracted] ),
+        REMOVEFILTERS ( 'Calendar' ),
+        YEAR ( 'Decommissioning Apps'[Date extracted] ) = ForecastYear
+    )
+
+VAR YearOnlyExtractStart =
+    DATE ( ForecastYear, MONTH ( LatestExtractInYear ), 1 )
+
+VAR YearOnlyExtractEnd =
+    EOMONTH ( LatestExtractInYear, 0 )
+
+/* If a selected year has no data -> return 0 */
+VAR HasDataForYear =
+    NOT ( (YearIsSel || MonthIsSel) && ISBLANK ( LatestExtractInYear ) )
+
+RETURN
+IF (
+    NOT HasDataForYear,
+    0,
+    IF (
+        MonthIsSel || NoneSelected,
+        CALCULATE (
+            COUNTROWS ( 'Decommissioning Apps' ),
+            'Decommissioning Apps'[Phase] = "Completed",
+            REMOVEFILTERS ( 'Calendar' ),
+            DATESBETWEEN ( 'Decommissioning Apps'[Date extracted], ExtractMonthStart, ExtractMonthEnd ),
+            DATESBETWEEN (
+                'Decommissioning Apps'[Forecast end Date],
+                DATE ( ForecastYear, 1, 1 ),
+                DATE ( ForecastYear, 12, 31 )
+            )
+        ),
+        CALCULATE (
+            COUNTROWS ( 'Decommissioning Apps' ),
+            'Decommissioning Apps'[Phase] = "Completed",
+            REMOVEFILTERS ( 'Calendar' ),
+            DATESBETWEEN ( 'Decommissioning Apps'[Date extracted], YearOnlyExtractStart, YearOnlyExtractEnd ),
+            DATESBETWEEN (
+                'Decommissioning Apps'[Forecast end Date],
+                DATE ( ForecastYear, 1, 1 ),
+                DATE ( ForecastYear, 12, 31 )
+            )
+        )
+    ) + 0
+)
+
