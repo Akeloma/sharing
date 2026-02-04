@@ -49,3 +49,63 @@ IF(
         )
     )
 )+0
+
+
+-----------
+NCount_new =
+VAR YearIsSel  = HASONEVALUE ( 'Calendar'[Year] )
+VAR MonthIsSel = HASONEVALUE ( 'Calendar'[Month] )
+
+/* Anchor date from slicers (what the user selected) */
+VAR TargetDateFromSlicer =
+    IF (
+        MonthIsSel,
+        CALCULATE (
+            MAX ( 'Calendar'[Date] ),
+            ALLEXCEPT ( 'Calendar', 'Calendar'[Year], 'Calendar'[Month] )
+        ),
+        IF (
+            YearIsSel,
+            CALCULATE (
+                MAX ( 'Calendar'[Date] ),
+                ALLEXCEPT ( 'Calendar', 'Calendar'[Year] )
+            ),
+            CALCULATE ( MAX ( 'Calendar'[Date] ), ALL ( 'Calendar' ) )
+        )
+    )
+
+/* Shift to previous month ONLY when month is selected */
+VAR TargetDate =
+    IF ( MonthIsSel, EOMONTH ( TargetDateFromSlicer, -1 ), TargetDateFromSlicer )
+
+/* December exception window vs. normal window */
+VAR IsDecemberSelection = MonthIsSel && MONTH ( TargetDate ) = 12
+
+VAR WindowStart =
+    IF (
+        IsDecemberSelection,
+        DATE ( YEAR ( TargetDate ), 12, 1 ),
+        EOMONTH ( TargetDate, 0 ) + 1
+    )
+
+VAR WindowEnd =
+    IF (
+        IsDecemberSelection,
+        DATE ( YEAR ( TargetDate ), 12, 31 ),
+        DATE ( YEAR ( WindowStart ), 12, 31 )
+    )
+
+RETURN
+    IF (
+        ISBLANK ( TargetDate ),
+        0,
+        CALCULATE (
+            COUNTROWS ( 'IT Architecture' ),
+            TREATAS (
+                DATESBETWEEN ( 'Calendar'[Date], WindowStart, WindowEnd ),
+                'IT Architecture'[Valid From]
+            )
+        )
+    ) + 0
+
+
