@@ -51,12 +51,12 @@ IF(
 )+0
 
 
------------
+----------------------
 NCount_new =
 VAR YearIsSel  = HASONEVALUE ( 'Calendar'[Year] )
 VAR MonthIsSel = HASONEVALUE ( 'Calendar'[Month] )
 
-/* Anchor date from slicers (what the user selected) */
+/* Anchor date from slicers */
 VAR TargetDateFromSlicer =
     IF (
         MonthIsSel,
@@ -74,38 +74,20 @@ VAR TargetDateFromSlicer =
         )
     )
 
-/* Shift to previous month ONLY when month is selected */
-VAR TargetDate =
-    IF ( MonthIsSel, EOMONTH ( TargetDateFromSlicer, -1 ), TargetDateFromSlicer )
-
-/* December exception window vs. normal window */
-VAR IsDecemberSelection = MonthIsSel && MONTH ( TargetDate ) = 12
-
-VAR WindowStart =
-    IF (
-        IsDecemberSelection,
-        DATE ( YEAR ( TargetDate ), 12, 1 ),
-        EOMONTH ( TargetDate, 0 ) + 1
-    )
-
-VAR WindowEnd =
-    IF (
-        IsDecemberSelection,
-        DATE ( YEAR ( TargetDate ), 12, 31 ),
-        DATE ( YEAR ( WindowStart ), 12, 31 )
-    )
+/* Previous month range */
+VAR PrevMonthEnd   = EOMONTH ( TargetDateFromSlicer, -1 )
+VAR PrevMonthStart = EOMONTH ( TargetDateFromSlicer, -2 ) + 1
 
 RETURN
-    IF (
-        ISBLANK ( TargetDate ),
-        0,
-        CALCULATE (
-            COUNTROWS ( 'IT Architecture' ),
-            TREATAS (
-                DATESBETWEEN ( 'Calendar'[Date], WindowStart, WindowEnd ),
-                'IT Architecture'[Valid From]
-            )
+IF (
+    ISBLANK ( TargetDateFromSlicer ),
+    0,
+    CALCULATE (
+        COUNTROWS ( 'IT Architecture' ),
+        FILTER (
+            ALL ( 'IT Architecture' ),
+            'IT Architecture'[Valid From] >= PrevMonthStart
+                && 'IT Architecture'[Valid From] <= PrevMonthEnd
         )
-    ) + 0
-
-
+    )
+) + 0
