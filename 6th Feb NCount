@@ -49,3 +49,56 @@ IF(
         )
     )
 )
+
+----------------------------------------------
+
+NCount PrevMonth = 
+VAR _selYear  = SELECTEDVALUE('Calendar'[Year])
+VAR _selMonth = SELECTEDVALUE('Calendar'[MonthNumber])
+VAR YearIsSel  = HASONEVALUE('Calendar'[Year])
+VAR MonthIsSel = HASONEVALUE('Calendar'[MonthNumber])
+
+/* 1. Calculate the shifted Month and Year (January Rollover) */
+VAR PrevMonthYear = IF ( _selMonth = 1, _selYear - 1, _selYear )
+VAR PrevMonthNum  = IF ( _selMonth = 1, 12, _selMonth - 1 )
+
+/* 2. Anchor to the previous month's date */
+VAR TargetDate = 
+    IF(
+        MonthIsSel,
+        DATE(PrevMonthYear, PrevMonthNum, 1),
+        -- Fallback: If no month is selected, you might want to default to previous month from today
+        EDATE(TODAY(), -1) 
+    )
+
+/* 3. Logic for the windows based on the SHIFTED TargetDate */
+-- Since TargetDate is already "Previous Month", we just use its month/year
+VAR IsDecemberSelection = (MONTH(TargetDate) = 12)
+
+VAR WindowStart =
+    IF(
+        IsDecemberSelection,
+        DATE(YEAR(TargetDate), 12, 1),
+        EOMONTH(TargetDate, 0) + 1
+    )
+
+VAR WindowEnd =
+    IF(
+        IsDecemberSelection,
+        DATE(YEAR(TargetDate), 12, 31),
+        DATE(YEAR(WindowStart), 12, 31)
+    )
+
+RETURN 
+IF(
+    NOT MonthIsSel && NOT YearIsSel, 
+    0,
+    CALCULATE(
+        COUNTROWS('IT Architecture'),
+        REMOVEFILTERS('Calendar'), -- Clean the slate since we use TREATAS
+        TREATAS(
+            DATESBETWEEN('Calendar'[Date], WindowStart, WindowEnd),
+            'IT Architecture'[Valid From]
+        )
+    )
+)
