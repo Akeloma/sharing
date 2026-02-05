@@ -1,0 +1,51 @@
+NCount = 
+VAR YearIsSel  = HASONEVALUE('Calendar'[Year])
+VAR MonthIsSel = HASONEVALUE('Calendar'[Month])
+ 
+/* Determine a single anchor date from slicers */
+VAR TargetDate =
+    IF(
+        MonthIsSel,
+        CALCULATE(
+            MAX('Calendar'[Date]),
+            ALLEXCEPT('Calendar', 'Calendar'[Year], 'Calendar'[Month])
+        ),
+        IF(
+            YearIsSel,
+            CALCULATE(
+                MAX('Calendar'[Date]),
+                ALLEXCEPT('Calendar', 'Calendar'[Year])
+            ),
+            CALCULATE( MAX('Calendar'[Date]), ALL('Calendar') )
+        )
+    )
+ 
+/* December exception window vs. normal window */
+VAR IsDecemberSelection = MonthIsSel && MONTH(TargetDate) = 12
+ 
+VAR WindowStart =
+    IF(
+        IsDecemberSelection,
+        DATE(YEAR(TargetDate), 12, 1),
+        EOMONTH(TargetDate, 0) + 1
+    )
+ 
+VAR WindowEnd =
+    IF(
+        IsDecemberSelection,
+        DATE(YEAR(TargetDate), 12, 31),
+        DATE(YEAR(WindowStart), 12, 31)
+    )
+ 
+RETURN 
+IF(
+    ISBLANK(TargetDate),
+    0,
+    CALCULATE(
+        COUNTROWS('IT Architecture'),
+        TREATAS(
+            DATESBETWEEN('Calendar'[Date], WindowStart, WindowEnd),
+            'IT Architecture'[Valid From]
+        )
+    )
+)
