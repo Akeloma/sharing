@@ -1,0 +1,58 @@
+NCount_PrevMonth =
+VAR YearIsSel  = HASONEVALUE ( 'Calendar'[Year] )
+VAR MonthIsSel = HASONEVALUE ( 'Calendar'[Month] )
+VAR NoneSelected = NOT YearIsSel && NOT MonthIsSel
+
+/* 1) Anchor date:
+      - If Month selected: use the selected month (from Calendar)
+      - If only Year selected: use latest Valid From within that year (from IT Architecture)
+      - If nothing selected: use latest Valid From overall
+*/
+VAR AnchorDate_MonthSel =
+    IF (
+        MonthIsSel,
+        CALCULATE (
+            MAX ( 'Calendar'[Date] ),
+            ALLEXCEPT ( 'Calendar', 'Calendar'[Year], 'Calendar'[Month] )
+        )
+    )
+
+VAR SelYear = SELECTEDVALUE ( 'Calendar'[Year] )
+
+VAR AnchorDate_YearSel =
+    IF (
+        YearIsSel && NOT MonthIsSel,
+        CALCULATE (
+            MAX ( 'IT Architecture'[Valid From] ),
+            FILTER (
+                ALL ( 'IT Architecture' ),
+                YEAR ( 'IT Architecture'[Valid From] ) = SelYear
+            )
+        )
+    )
+
+VAR AnchorDate_NoneSel =
+    IF (
+        NoneSelected,
+        CALCULATE ( MAX ( 'IT Architecture'[Valid From] ), ALL ( 'IT Architecture' ) )
+    )
+
+VAR AnchorDate =
+    COALESCE ( AnchorDate_MonthSel, AnchorDate_YearSel, AnchorDate_NoneSel )
+
+/* 2) Previous month window (handles Jan -> Dec rollover automatically) */
+VAR PrevMonthEnd   = EOMONTH ( AnchorDate, -1 )
+VAR PrevMonthStart = DATE ( YEAR ( PrevMonthEnd ), MONTH ( PrevMonthEnd ), 1 )
+
+RETURN
+IF (
+    ISBLANK ( AnchorDate ),
+    0,
+    CALCULATE (
+        COUNTROWS ( 'IT Architecture' ),
+        TREATAS (
+            DATESBETWEEN ( 'Calendar'[Date], PrevMonthStart, PrevMonthEnd ),
+            'IT Architecture'[Valid From]
+        )
+    ) + 0
+)
