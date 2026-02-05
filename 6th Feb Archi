@@ -69,54 +69,51 @@ VAR _selYear  = SELECTEDVALUE('Calendar'[Year])
 VAR _selMonth = SELECTEDVALUE('Calendar'[MonthNumber])
 VAR YearIsSel = HASONEVALUE('Calendar'[Year])
 VAR MonthIsSel = HASONEVALUE('Calendar'[Month])
-
--- Handle January rollover
-VAR PrevMonthYear =
-    IF ( _selMonth = 1, _selYear - 1, _selYear )
-
-VAR PrevMonthNum =
-    IF ( _selMonth = 1, 12, _selMonth - 1 )
-
-/* ✅ FIX: Anchor TargetDate to the previous month when a month is selected */
+ 
 VAR TargetDate =
-    IF (
+    IF(
         MonthIsSel,
-        DATE ( PrevMonthYear, PrevMonthNum, 1 ),   -- any date in prev month works
-        IF (
+        CALCULATE(
+            MAX('Calendar'[Date]),
+            ALLEXCEPT('Calendar', 'Calendar'[Year], 'Calendar'[Month])
+        ),
+        IF(
             YearIsSel,
-            CALCULATE (
-                MAX ( 'Calendar'[Date] ),
-                ALLEXCEPT ( 'Calendar', 'Calendar'[Year] )
+            CALCULATE(
+                MAX('Calendar'[Date]),
+                ALLEXCEPT('Calendar', 'Calendar'[Year])
             ),
-            CALCULATE ( MAX ( 'Calendar'[Date] ), ALL ( 'Calendar' ) )
+            CALCULATE(MAX('Calendar'[Date]), ALL('Calendar'))
         )
     )
-
-VAR StartOfPrevMonth = DATE ( YEAR ( TargetDate ), MONTH ( TargetDate ), 1 )
-VAR EndOfPrevMonth   = EOMONTH ( TargetDate, 0 )
-
-VAR StartOfYearr = DATE ( YEAR ( TargetDate ), 1, 1 )
-VAR EndOfYearr   = DATE ( YEAR ( TargetDate ), 12, 31 )
-
+ 
+-- Handle January rollover for previous month calculation
+VAR PrevMonthYear = IF(MONTH(TargetDate) = 1, YEAR(TargetDate) - 1, YEAR(TargetDate))
+VAR PrevMonthNum = IF(MONTH(TargetDate) = 1, 12, MONTH(TargetDate) - 1)
+ 
+VAR StartOfPrevMonth = DATE(PrevMonthYear, PrevMonthNum, 1)
+VAR EndOfPrevMonth = EOMONTH(StartOfPrevMonth, 0)
+ 
+VAR StartOfYearr = DATE(YEAR(TargetDate), 1, 1)
+VAR EndOfYearr = DATE(YEAR(TargetDate), 12, 31)
+ 
 VAR FilteredIDs =
-    CALCULATETABLE (
-        VALUES ( 'Decommissioning Apps'[ID_4] ),
+    CALCULATETABLE(
+        VALUES('Decommissioning Apps'[ID_4]),
         'Decommissioning Apps'[Phase] = "Completed",
         'Decommissioning Apps'[Date extracted] >= StartOfPrevMonth,
         'Decommissioning Apps'[Date extracted] <= EndOfPrevMonth,
         'Decommissioning Apps'[Forecast End Date] >= StartOfYearr,
         'Decommissioning Apps'[Forecast End Date] <= EndOfYearr
     )
-
+ 
 VAR Result =
-    CALCULATE (
+    CALCULATE(
         DISTINCTCOUNT('IT Architecture'[ID]),
-        REMOVEFILTERS ( 'Calendar' ),
-        DATESBETWEEN ( 'Calendar'[Date], StartOfPrevMonth, EndOfPrevMonth ),
-        KEEPFILTERS ( TREATAS ( FilteredIDs, 'IT Architecture'[ID] ) )
+        REMOVEFILTERS('Calendar'),
+        DATESBETWEEN('Calendar'[Date], StartOfPrevMonth, EndOfPrevMonth),
+        KEEPFILTERS(TREATAS(FilteredIDs, 'IT Architecture'[ID]))
     )
-
+ 
 RETURN
 Result + 0
-
-
