@@ -102,3 +102,47 @@ IF(
         )
     )
 )
+----------------------------------------------
+
+NCount PrevMonth = 
+VAR _selYear  = SELECTEDVALUE('Calendar'[Year])
+VAR _selMonth = SELECTEDVALUE('Calendar'[MonthNumber])
+VAR YearIsSel  = HASONEVALUE('Calendar'[Year])
+VAR MonthIsSel = HASONEVALUE('Calendar'[Month])
+
+-- 1. Calculate the Shifted Month and Year (Jan 2026 -> Dec 2025)
+VAR PrevMonthYear = IF ( _selMonth = 1, _selYear - 1, _selYear )
+VAR PrevMonthNum  = IF ( _selMonth = 1, 12, _selMonth - 1 )
+
+/* 2. Determine the Anchor Date (The 1st of the "Previous" Month) */
+VAR TargetDate =
+    IF(
+        MonthIsSel,
+        DATE(PrevMonthYear, PrevMonthNum, 1),
+        IF(
+            YearIsSel,
+            CALCULATE(MAX('Calendar'[Date]), ALLEXCEPT('Calendar', 'Calendar'[Year])),
+            CALCULATE(MAX('Calendar'[Date]), ALL('Calendar'))
+        )
+    )
+
+/* 3. Window Logic: Ensure we stay ONLY within that target month */
+-- If Jan 2026 is selected, TargetDate is Dec 1, 2025.
+-- We want WindowStart = Dec 1 and WindowEnd = Dec 31.
+
+VAR WindowStart = DATE(YEAR(TargetDate), MONTH(TargetDate), 1)
+VAR WindowEnd   = EOMONTH(TargetDate, 0)
+
+RETURN 
+IF(
+    ISBLANK(TargetDate),
+    0,
+    CALCULATE(
+        COUNTROWS('IT Architecture'),
+        REMOVEFILTERS('Calendar'), 
+        TREATAS(
+            DATESBETWEEN('Calendar'[Date], WindowStart, WindowEnd),
+            'IT Architecture'[Valid From]
+        )
+    )
+)
