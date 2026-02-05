@@ -146,3 +146,63 @@ IF(
         )
     )
 )
+
+----------------------------------------------
+
+NCount_PrevMonth = 
+VAR YearIsSel  = HASONEVALUE('Calendar'[Year])
+VAR MonthIsSel = HASONEVALUE('Calendar'[Month])
+ 
+/* Determine a single anchor date from slicers */
+VAR TargetDate =
+    IF(
+        MonthIsSel,
+        CALCULATE(
+            MAX('Calendar'[Date]),
+            ALLEXCEPT('Calendar', 'Calendar'[Year], 'Calendar'[Month])
+        ),
+        IF(
+            YearIsSel,
+            CALCULATE(
+                MAX('Calendar'[Date]),
+                ALLEXCEPT('Calendar', 'Calendar'[Year])
+            ),
+            CALCULATE( MAX('Calendar'[Date]), ALL('Calendar') )
+        )
+    )
+
+/* Shift back one month */
+VAR PrevMonthDate = EOMONTH(TargetDate, -1)
+
+/* Check if we're selecting January (need to show December) */
+VAR IsJanuarySelection = MonthIsSel && MONTH(TargetDate) = 1
+
+/* December exception window vs. normal window */
+VAR IsDecemberTarget = MONTH(PrevMonthDate) = 12
+ 
+VAR WindowStart =
+    IF(
+        IsDecemberTarget,
+        DATE(YEAR(PrevMonthDate), 12, 1),
+        EOMONTH(PrevMonthDate, 0) + 1
+    )
+ 
+VAR WindowEnd =
+    IF(
+        IsDecemberTarget,
+        DATE(YEAR(PrevMonthDate), 12, 31),
+        DATE(YEAR(WindowStart), 12, 31)
+    )
+ 
+RETURN 
+IF(
+    ISBLANK(TargetDate),
+    0,
+    CALCULATE(
+        COUNTROWS('IT Architecture'),
+        TREATAS(
+            DATESBETWEEN('Calendar'[Date], WindowStart, WindowEnd),
+            'IT Architecture'[Valid From]
+        )
+    )
+)+0
