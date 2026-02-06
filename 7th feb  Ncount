@@ -1,0 +1,57 @@
+okay this powerbi measure calculates NCount correctly, but I want to add the logic to display the previous month data. for example if i select Jan 2026, i should see Dec 2025 data. and this is how the logic goes in excel -
+lets say our selected month is Jan 2026, and our previous month is Dec 2025 (for this example)
+1. filter out previous month date (Dec 2025) from 'IT Architecture'[Date extracted]
+2. filter out from  'IT Architecture'[Valid From], all the dates within December (1st Dec - 31st Dec). if we were to take other months, they would filter out all the dates from the previous month, till December 31st. eg. July 2025 --> filter July 1st till 31 Dec.
+3. we count the number of rows, and match it to their respective OE. thats it! (we dont have to do this part since theres a relationship between OE names)
+
+NCount_new = 
+VAR YearIsSel  = HASONEVALUE('Calendar'[Year])
+VAR MonthIsSel = HASONEVALUE('Calendar'[Month])
+ 
+/* Determine a single anchor date from slicers */
+VAR TargetDate =
+    IF(
+        MonthIsSel,
+        CALCULATE(
+            MAX('Calendar'[Date]),
+            ALLEXCEPT('Calendar', 'Calendar'[Year], 'Calendar'[Month])
+        ),
+        IF(
+            YearIsSel,
+            CALCULATE(
+                MAX('Calendar'[Date]),
+                ALLEXCEPT('Calendar', 'Calendar'[Year])
+            ),
+            CALCULATE( MAX('Calendar'[Date]), ALL('Calendar') )
+        )
+    )
+ 
+/* December exception window vs. normal window */
+VAR IsDecemberSelection = MonthIsSel && MONTH(TargetDate) = 12
+ 
+VAR WindowStart =
+    IF(
+        IsDecemberSelection,
+        DATE(YEAR(TargetDate), 12, 1),
+        EOMONTH(TargetDate, 0) + 1
+    )
+ 
+VAR WindowEnd =
+    IF(
+        IsDecemberSelection,
+        DATE(YEAR(TargetDate), 12, 31),
+        DATE(YEAR(WindowStart), 12, 31)
+    )
+ 
+RETURN
+IF(
+    ISBLANK(TargetDate),
+    0,
+    CALCULATE(
+        COUNTROWS('IT Architecture'),
+        TREATAS(
+            DATESBETWEEN('Calendar'[Date], WindowStart, WindowEnd),
+            'IT Architecture'[Valid From]
+        )
+    )
+)+0
