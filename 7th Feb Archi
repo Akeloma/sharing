@@ -49,3 +49,60 @@ IF(
         )
     )
 )+0
+
+----------------------------------------------
+
+NCount_PrevMonth = 
+VAR YearIsSel  = HASONEVALUE('Calendar'[Year])
+VAR MonthIsSel = HASONEVALUE('Calendar'[Month])
+
+/* 1. Determine the Current Target Date from slicers */
+VAR CurrentTargetDate =
+    IF(
+        MonthIsSel,
+        CALCULATE(
+            MAX('Calendar'[Date]),
+            ALLEXCEPT('Calendar', 'Calendar'[Year], 'Calendar'[Month])
+        ),
+        IF(
+            YearIsSel,
+            CALCULATE(
+                MAX('Calendar'[Date]),
+                ALLEXCEPT('Calendar', 'Calendar'[Year])
+            ),
+            CALCULATE( MAX('Calendar'[Date]), ALL('Calendar') )
+        )
+    )
+
+/* 2. SHIFT TO PREVIOUS MONTH: This is the core change */
+/* If Jan 2026 is selected, PrevTargetDate becomes Dec 31, 2025 */
+VAR PrevTargetDate = EDATE(CurrentTargetDate, -1)
+
+/* 3. Logic for the Previous Month's Windows */
+VAR IsDecemberSelection = MONTH(PrevTargetDate) = 12
+
+VAR WindowStart =
+    IF(
+        IsDecemberSelection,
+        DATE(YEAR(PrevTargetDate), 12, 1),      -- If Prev is Dec: 1st Dec
+        DATE(YEAR(PrevTargetDate), MONTH(PrevTargetDate), 1) -- Otherwise: 1st of that month
+    )
+
+VAR WindowEnd = DATE(YEAR(PrevTargetDate), 12, 31) -- Always Dec 31st of the Prev Month's year
+
+RETURN
+IF(
+    ISBLANK(CurrentTargetDate),
+    0,
+    CALCULATE(
+        COUNTROWS('IT Architecture'),
+        /* Filter 1: The Date Extracted must match the Previous Month's EOM */
+        'IT Architecture'[Date extracted] = EOMONTH(PrevTargetDate, 0),
+        
+        /* Filter 2: The Valid From window logic */
+        TREATAS(
+            DATESBETWEEN('Calendar'[Date], WindowStart, WindowEnd),
+            'IT Architecture'[Valid From]
+        )
+    )
+)+0
