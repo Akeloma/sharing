@@ -52,11 +52,11 @@ IF(
 
 ----------------------------------------------
 
-NCount_prevmonth =
+NCount_PrevMonth = 
 VAR YearIsSel  = HASONEVALUE('Calendar'[Year])
 VAR MonthIsSel = HASONEVALUE('Calendar'[Month])
 
-/* Determine a single anchor date from slicers (your original behavior) */
+/* Determine a single anchor date from slicers */
 VAR TargetDate =
     IF(
         MonthIsSel,
@@ -74,39 +74,23 @@ VAR TargetDate =
         )
     )
 
-/* Shift to PREVIOUS month (this is the key change) */
-VAR PrevMonthAnchor = EOMONTH(TargetDate, -1)
-VAR PrevMonthStart  = DATE(YEAR(PrevMonthAnchor), MONTH(PrevMonthAnchor), 1)
-VAR PrevMonthEnd    = EOMONTH(PrevMonthAnchor, 0)
+/* Calculate previous month and year */
+VAR PrevMonthDate =
+    EOMONTH(TargetDate, -1)
+VAR PrevMonthStart =
+    DATE(YEAR(PrevMonthDate), MONTH(PrevMonthDate), 1)
+VAR PrevMonthEnd =
+    EOMONTH(PrevMonthDate, 0)
 
-/* Valid From window:
-   - If previous month is December → Dec 1 to Dec 31 (same year)
-   - Else → PrevMonthStart to Dec 31 of that same year
-*/
-VAR WindowStart = PrevMonthStart
-VAR WindowEnd   =
-    IF(
-        MONTH(PrevMonthAnchor) = 12,
-        DATE(YEAR(PrevMonthAnchor), 12, 31),
-        DATE(YEAR(PrevMonthStart), 12, 31)
-    )
-
+/* Filter 'IT Architecture'[Valid From] for previous month */
 RETURN
 IF(
     ISBLANK(TargetDate),
     0,
     CALCULATE(
         COUNTROWS('IT Architecture'),
-
-        /* (1) Filter Date extracted to the PREVIOUS month */
         TREATAS(
             DATESBETWEEN('Calendar'[Date], PrevMonthStart, PrevMonthEnd),
-            'IT Architecture'[Date extracted]
-        ),
-
-        /* (2) Filter Valid From to your Excel window */
-        TREATAS(
-            DATESBETWEEN('Calendar'[Date], WindowStart, WindowEnd),
             'IT Architecture'[Valid From]
         )
     )
