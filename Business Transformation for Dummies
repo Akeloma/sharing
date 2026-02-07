@@ -1,142 +1,21 @@
-Perfect — this is clear 👍
-Below is a **clean, manager-friendly “Step 2” section** you can drop straight into your documentation. I’ve rewritten your points in **plain English**, structured, and slightly tightened so it reads professional but still very “for dummies”.
+What Happens If Something Breaks 😅
 
----
+Managers will worry — address this upfront.
 
-## **Step 2: Update the Excel File (Data Entry Rules)**
+Common causes:
 
-This step explains **exactly how to fill in the Excel file** so that the Power BI dashboard updates correctly.
+Column renamed
 
-⚠️ **Important:**
-All updates must be done in the **existing Excel file stored in SharePoint**.
-Do **not** change column names, sheet names, or file structure.
+Sheet renamed
 
----
+File moved in SharePoint
 
-### **1. Fill in the Core Columns**
+File replaced instead of edited
 
-You are required to enter data for **all relevant columns** in each row.
+What to do:
 
-* **KPIs**
-  → Enter the **programme name** (example: “Cloud Transformation”, “Data Governance”)
+Stop editing the file
 
-* **Programs**
-  → Enter the **overarching topic or initiative** the KPI belongs to
+Inform dashboard owner
 
----
-
-### **2. OEs in Progress (Very Important Rule)**
-
-* Each row must contain **only ONE OE**
-* If **more than one OE** is in progress:
-
-  1. Insert a **new row**
-  2. Duplicate the same **KPI** and **Program**
-  3. Enter **one OE per row**
-
-✅ One row = one OE only
-🚫 Do not list multiple OEs in a single cell
-
----
-
-### **3. Scope Column**
-
-* Fill in the **Scope (Key milestone…)** column with the relevant scope or milestone
-* Keep it clear and business-focused
-* This is a **text field**, not a checklist
-
----
-
-### **4. Dates (Important Formatting Note)**
-
-There are **two date-related columns**:
-
-* **Targeted Deliver Time**
-* **Estimated Deliver Time**
-
-⚠️ These columns behave like **text fields in Power BI**.
-
-👉 **Do not format or type dates like real Excel dates**
-Type them **as text exactly how you want them to appear** (e.g. “Q3 2026”, “Dec 2025”).
-
----
-
-### **5. Financial & Commentary Columns**
-
-Please complete the following where applicable:
-
-* **Planned Budget (2026)**
-* **Actual Spend**
-* **Benefit**
-* **Key Notes**
-
-**Key Notes guidelines:**
-
-* Maximum **20 words**
-* Focus on key updates, risks, or blockers
-* Avoid long explanations
-
----
-
-### **6. Colour Column (Strict Rules)**
-
-The **Colour** column controls the dashboard status.
-
-You may ONLY enter one of the following values:
-
-* **Red**
-* **Amber**
-* **Green**
-* **Blue**
-* **Grey**
-
-✅ Case does not matter
-(RED, red, Red, rEd are all acceptable)
-
-🚫 Do not enter any other colours or words
-
----
-
-### **7. Reporting Date Column (Mandatory)**
-
-* Every row with data **must have a date**
-* The date must represent the **reporting month**
-* This ensures the data appears correctly when filtering by month in Power BI
-
-🚫 Rows without a reporting date will not display correctly
-
----
-
-### **8. Excel Formatting Notes**
-
-* Font size, colour, or styling in Excel **will NOT affect Power BI**
-* Avoid:
-
-  * Merged cells
-  * Manual totals
-  * Extra formatting
-
-Power BI reads **content**, not appearance.
-
----
-
-### **9. Final Step**
-
-Once all updates are complete:
-
-1. **Save and close** the Excel file
-2. Go to Power BI
-3. **Refresh the Business Transformation Landing Page**
-
-The dashboard will now reflect the updated data.
-
----
-
-If you want, next I can:
-
-* Tighten this further into a **1-page SOP**
-* Add a **“Common mistakes to avoid”** box
-* Rewrite it in a more **formal audit-style tone**
-* Align wording exactly to your **column names**
-
-Just tell me 👍
+Do NOT attempt fixes inside Power BI
