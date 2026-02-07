@@ -1,16 +1,7 @@
-Where the Data Lives (Golden Rule)
-📍 Source of Truth
+Step 1: Open the Excel File from SharePoint
 
-The dashboard is connected to Excel files stored in SharePoint
+Always open the file directly from SharePoint
 
-Power BI automatically reads from these files
+Use “Open in Excel” (not a downloaded copy)
 
-⚠️ DO NOT:
-
-Download the Excel file and edit locally
-
-Upload a new file with a different name
-
-Move the file to another folder
-
-👉 Power BI is connected to a specific file path.
+✔️ This ensures Power BI can see your changes
