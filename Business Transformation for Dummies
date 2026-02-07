@@ -1,11 +1,16 @@
-Purpose (1 paragraph only):
-This Business Transformation dashboard provides a single, high-level view of transformation progress across Operating Entities (OEs).
-It helps leadership:
+Where the Data Lives (Golden Rule)
+📍 Source of Truth
 
-Track where transformation is improving or declining
+The dashboard is connected to Excel files stored in SharePoint
 
-Identify risk areas early
+Power BI automatically reads from these files
 
-Support data-driven decisions without going into technical details
+⚠️ DO NOT:
 
-👉 You do NOT need Power BI skills to use this dashboard.
+Download the Excel file and edit locally
+
+Upload a new file with a different name
+
+Move the file to another folder
+
+👉 Power BI is connected to a specific file path.
