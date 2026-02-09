@@ -1,99 +1,43 @@
-Compliance Matrix Output - Previous Month = 
+Audit Matrix Output - Previous Month = 
 VAR SelStatus =
     COALESCE (
         SELECTEDVALUE ( StatusTable[Status] ),
-        SELECTEDVALUE ( tblCompliance[Status] )
+        SELECTEDVALUE ( tblAudit[Status] )
     )
+
+VAR PrevMonthFilter =
+    PREVIOUSMONTH ( 'Calendar'[Date] )
 
 VAR Result =
     SWITCH (
         TRUE(),
 
-        SelStatus = "Non-Compliance",
+        SelStatus = "Total IT Audit Findings",
             CALCULATE (
-                [Total Count],
-                tblCompliance[Status] = "Non-Compliance",
-                PREVIOUSMONTH ( 'Calendar'[Date] )
+                SUM ( tblAudit[Count] ),
+                tblAudit[Status] = "Total IT Audit Findings",
+                PrevMonthFilter
             ),
 
         SelStatus = "Remediated",
             CALCULATE (
-                [Total Count],
-                tblCompliance[Status] = "Remediated",
-                PREVIOUSMONTH ( 'Calendar'[Date] )
+                SUM ( tblAudit[Count] ),
+                tblAudit[Status] = "Remediated",
+                PrevMonthFilter
             ),
 
         SelStatus = "Current Overdue" || SelStatus = "Current overdue",
             CALCULATE (
-                [Total Count],
-                tblCompliance[Status] = "Current overdue",
-                PREVIOUSMONTH ( 'Calendar'[Date] )
+                SUM ( tblAudit[Count] ),
+                tblAudit[Status] = "Current overdue",
+                PrevMonthFilter
             ),
 
         SelStatus = "YTD Remediated",
-            FORMAT ( [YTD Remediated % - Previous Month], "0%" ),
+            FORMAT ( [YTD Remediated audit % - Previous Month], "0%" ),
 
         BLANK()
     )
 
 RETURN
     COALESCE ( Result, 0 )
-
-
-----------------------------------
-
-Compliance Matrix Output - Previous Month =
-VAR SelStatus =
-    COALESCE (
-        SELECTEDVALUE ( StatusTable[Status] ),
-        SELECTEDVALUE ( tblCompliance[Status] )
-    )
-
-/* Previous month counts for the special-case logic */
-VAR Prev_NonCompliance =
-    CALCULATE (
-        [Total Count],
-        tblCompliance[Status] = "Non-Compliance",
-        PREVIOUSMONTH ( 'Calendar'[Date] )
-    )
-
-VAR Prev_Remediated =
-    CALCULATE (
-        [Total Count],
-        tblCompliance[Status] = "Remediated",
-        PREVIOUSMONTH ( 'Calendar'[Date] )
-    )
-
-VAR Result =
-    SWITCH (
-        TRUE(),
-
-        SelStatus = "Non-Compliance",
-            Prev_NonCompliance,
-
-        SelStatus = "Remediated",
-            Prev_Remediated,
-
-        SelStatus = "Current Overdue" || SelStatus = "Current overdue",
-            CALCULATE (
-                [Total Count],
-                tblCompliance[Status] = "Current overdue",
-                PREVIOUSMONTH ( 'Calendar'[Date] )
-            ),
-
-        SelStatus = "YTD Remediated",
-            VAR Pct =
-                IF (
-                    Prev_NonCompliance = Prev_Remediated,
-                    1,                -- show 100% when equal (including 0 & 0)
-                    [YTD Remediated % - Previous Month]
-                )
-            RETURN
-                FORMAT ( Pct, "0%" ),
-
-        BLANK()
-    )
-
-RETURN
-    COALESCE ( Result, 0 )
-
