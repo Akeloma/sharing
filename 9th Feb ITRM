@@ -1,0 +1,40 @@
+Compliance Matrix Output - Previous Month = 
+VAR SelStatus =
+    COALESCE (
+        SELECTEDVALUE ( StatusTable[Status] ),
+        SELECTEDVALUE ( tblCompliance[Status] )
+    )
+
+VAR Result =
+    SWITCH (
+        TRUE(),
+
+        SelStatus = "Non-Compliance",
+            CALCULATE (
+                [Total Count],
+                tblCompliance[Status] = "Non-Compliance",
+                PREVIOUSMONTH ( 'Calendar'[Date] )
+            ),
+
+        SelStatus = "Remediated",
+            CALCULATE (
+                [Total Count],
+                tblCompliance[Status] = "Remediated",
+                PREVIOUSMONTH ( 'Calendar'[Date] )
+            ),
+
+        SelStatus = "Current Overdue" || SelStatus = "Current overdue",
+            CALCULATE (
+                [Total Count],
+                tblCompliance[Status] = "Current overdue",
+                PREVIOUSMONTH ( 'Calendar'[Date] )
+            ),
+
+        SelStatus = "YTD Remediated",
+            FORMAT ( [YTD Remediated % - Previous Month], "0%" ),
+
+        BLANK()
+    )
+
+RETURN
+    COALESCE ( Result, 0 )
