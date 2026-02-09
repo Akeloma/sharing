@@ -41,3 +41,63 @@ VAR Result =
 
 RETURN
     COALESCE ( Result, 0 )
+------------------------------------
+
+Audit Matrix Output - Previous Month =
+VAR SelStatus =
+    COALESCE (
+        SELECTEDVALUE ( StatusTable[Status] ),
+        SELECTEDVALUE ( tblAudit[Status] )
+    )
+
+VAR PrevMonthFilter =
+    PREVIOUSMONTH ( 'Calendar'[Date] )
+
+/* Previous month counts for the special-case logic */
+VAR Prev_TotalFindings =
+    CALCULATE (
+        SUM ( tblAudit[Count] ),
+        tblAudit[Status] = "Total IT Audit Findings",
+        PrevMonthFilter
+    )
+
+VAR Prev_Remediated =
+    CALCULATE (
+        SUM ( tblAudit[Count] ),
+        tblAudit[Status] = "Remediated",
+        PrevMonthFilter
+    )
+
+VAR Result =
+    SWITCH (
+        TRUE(),
+
+        SelStatus = "Total IT Audit Findings",
+            Prev_TotalFindings,
+
+        SelStatus = "Remediated",
+            Prev_Remediated,
+
+        SelStatus = "Current Overdue" || SelStatus = "Current overdue",
+            CALCULATE (
+                SUM ( tblAudit[Count] ),
+                tblAudit[Status] = "Current overdue",
+                PrevMonthFilter
+            ),
+
+        SelStatus = "YTD Remediated",
+            VAR Pct =
+                IF (
+                    Prev_TotalFindings = Prev_Remediated,
+                    1,  -- show 100% when equal (including 0 & 0)
+                    [YTD Remediated audit % - Previous Month]
+                )
+            RETURN
+                FORMAT ( Pct, "0%" ),
+
+        BLANK()
+    )
+
+RETURN
+    COALESCE ( Result, 0 )
+
