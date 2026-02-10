@@ -1,0 +1,17 @@
+Selected Comment Text (Prev Month) = 
+VAR PrevYear =
+    CALCULATE(
+        MIN('Calendar'[Year]),
+        DATEADD('Calendar'[Date], -1, MONTH)
+    )
+VAR PrevMonthName =
+    CALCULATE(
+        MIN('Calendar'[Month]),   -- e.g., "January"
+        DATEADD('Calendar'[Date], -1, MONTH)
+    )
+RETURN
+CALCULATE(
+    SELECTEDVALUE('Comments/Verbatim'[Comment Text], "No comment available"),
+    'Comments/Verbatim'[Year] = PrevYear,
+    'Comments/Verbatim'[Month] = PrevMonthName   -- assumes Month is a name in Comments
+)
