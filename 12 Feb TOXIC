@@ -147,3 +147,19 @@ CALCULATE(
     ),
     'Calendar'[Date] = MaxDateForScope
 ) + 0
+
+
+--------------------------------
+ToxicCount_Check = 
+VAR SelectedYear = SELECTEDVALUE('Calendar'[Year])
+
+RETURN
+
+CALCULATE(COALESCE(
+    CALCULATE(
+    SUM('Toxic Remediation'[Number of IT Assets]),
+    'Toxic Remediation'[Current Status] = "Toxic",
+    'Calendar'[Date] = MAX('Toxic Remediation'[Date])
+), 
+    0), 
+    PARALLELPERIOD('Calendar'[Date], -1, MONTH))
