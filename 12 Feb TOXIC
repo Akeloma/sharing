@@ -89,3 +89,54 @@ VAR LOCAL_ =
 RETURN
     FORMAT(GROUP_, "0") & " / " & FORMAT(LOCAL_, "0")
 
+------------------------------
+FLTCount_Check_PrevMonth =
+VAR YearIsSel  = HASONEVALUE ( 'Calendar'[Year] )
+VAR MonthIsSel = HASONEVALUE ( 'Calendar'[Month] )
+
+/* 1) Anchor date from slicer context */
+VAR SelectedDate =
+    IF (
+        MonthIsSel,
+        CALCULATE (
+            MAX ( 'Calendar'[Date] ),
+            ALLEXCEPT ( 'Calendar', 'Calendar'[Year], 'Calendar'[Month] )
+        ),
+        IF (
+            YearIsSel,
+            CALCULATE (
+                MAX ( 'Toxic Remediation'[Date] ),
+                ALLEXCEPT ( 'Calendar', 'Calendar'[Year] )
+            ),
+            CALCULATE ( MAX ( 'Toxic Remediation'[Date] ), ALL ( 'Toxic Remediation' ) )
+        )
+    )
+
+/* 2) Shift back 1 month */
+VAR TargetDate = EDATE ( SelectedDate, -1 )
+
+/* 3) Previous month window */
+VAR StartOfPrevMonth = DATE ( YEAR ( TargetDate ), MONTH ( TargetDate ), 1 )
+VAR EndOfPrevMonth   = EOMONTH ( TargetDate, 0 )
+
+/* 4) Year to apply to Toxic from Date (handles Jan -> Dec rollover) */
+VAR TargetYear = YEAR ( TargetDate )
+
+/* 5) Snapshot date for this OE, but ONLY within previous month */
+VAR MaxDateForScopePrevMonth =
+    CALCULATE (
+        MAX ( 'Toxic Remediation'[Date] ),
+        ALLEXCEPT ( 'Toxic Remediation', 'Toxic Remediation'[Allianz OE Name] ),
+        'Toxic Remediation'[Date] >= StartOfPrevMonth,
+        'Toxic Remediation'[Date] <= EndOfPrevMonth
+    )
+
+RETURN
+CALCULATE (
+    SUM ( 'Toxic Remediation'[Number of IT Assets] ),
+    'Toxic Remediation'[Current Status] = "Forward Looking Toxic",
+    YEAR ( 'Toxic Remediation'[Toxic from Date] ) = TargetYear,
+    'Toxic Remediation'[Date] = MaxDateForScopePrevMonth
+) + 0
+
+
