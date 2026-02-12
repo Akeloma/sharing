@@ -1,0 +1,19 @@
+what i want - in my powerbi dax measure, when i select the Calendar[Year] and Calendar[month], is it calculating the previous month's Future looking toxic assets? for example, i choose Feb 2026, it should calculate and return the Future looking toxic assets for Jan 2026. and if i choose Jan 2026, it should show Dec 2025 Future looking toxic assets.
+
+measure -
+FLTCount_Check = 
+VAR SelectedYear = SELECTEDVALUE('Calendar'[Year])
+
+VAR MaxDateForScope =
+    CALCULATE(
+        MAX('Toxic Remediation'[Date]),
+        ALLEXCEPT('Toxic Remediation', 'Toxic Remediation'[Allianz OE Name])
+    )
+
+RETURN
+CALCULATE(
+    SUM('Toxic Remediation'[Number of IT Assets]),
+    'Toxic Remediation'[Current Status] = "Forward Looking Toxic",
+    YEAR('Toxic Remediation'[Toxic from Date]) = SelectedYear,
+    'Calendar'[Date] = MaxDateForScope
+) + 0
