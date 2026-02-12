@@ -19,3 +19,51 @@ let
     #"Changed Type" = Table.TransformColumnTypes(#"Changed Type with Locale",{{"Number of IT Assets", type number}})
 in
     #"Changed Type"
+--------------------------------
+
+let
+    Source = Excel.Workbook(File.Contents("C:\Users\DMUQ6RG\OneDrive - Allianz\Desktop\Power BI Files Testing\Toxic Remediation.xlsx"), null, true),
+    #"Overall database_Sheet" = Source{[Item="Overall database",Kind="Sheet"]}[Data],
+    #"Changed Type7" = Table.TransformColumnTypes(#"Overall database_Sheet",{{"Column1", type text}, {"Column2", type text}, {"Column3", type text}, {"Column4", type text}, {"Column5", type any}, {"Column6", type text}, {"Column7", type any}, {"Column8", type text}, {"Column9", type text}, {"Column10", type text}, {"Column11", type text}, {"Column12", type text}, {"Column13", type text}, {"Column14", type text}, {"Column15", type any}, {"Column16", type any}}),
+    #"Changed Type6" = Table.TransformColumnTypes(#"Changed Type7",{{"Column1", type text}, {"Column2", type text}, {"Column3", type text}, {"Column4", type text}, {"Column5", type any}, {"Column6", type text}, {"Column7", type any}, {"Column8", type text}, {"Column9", type text}, {"Column10", type text}, {"Column11", type text}, {"Column12", type text}, {"Column13", type text}, {"Column14", type text}, {"Column15", type any}, {"Column16", type any}}),
+    #"Removed Top Rows1" = Table.Skip(#"Changed Type6",5),
+    #"Promoted Headers1" = Table.PromoteHeaders(#"Removed Top Rows1", [PromoteAllScalars=true]),
+    #"Renamed Columns1" = Table.RenameColumns(#"Promoted Headers1",{{"Date", "DD/MM/YYYY"}}),
+    #"Removed Columns1" = Table.RemoveColumns(#"Renamed Columns1",{"Column16"}),
+    #"Removed Columns" = Table.RemoveColumns(#"Removed Columns1",{"DD/MM/YYYY"}),
+    #"Replaced Value" = Table.ReplaceValue(#"Removed Columns","As at","",Replacer.ReplaceText,{"File"}),
+    #"Changed Type2" = Table.TransformColumnTypes(#"Replaced Value",{{"File", type date}}),
+    #"Renamed Columns" = Table.RenameColumns(#"Changed Type2",{{"File", "Date"}}),
+    #"Changed Type3" = Table.TransformColumnTypes(#"Renamed Columns",{{"Date", type date}}),
+
+    // ✅ Replace "Already toxic" variants with sentinel date 07/01/2000
+    #"Replaced Already Toxic" =
+        Table.ReplaceValue(
+            #"Changed Type3",
+            each [Toxic from Date],
+            each
+                let
+                    t = if [Toxic from Date] = null then null else Text.Trim(Text.From([Toxic from Date])),
+                    tLower = if t = null then null else Text.Lower(t)
+                in
+                    if tLower = "already toxic" then "07/01/2000" else [Toxic from Date],
+            Replacer.ReplaceValue,
+            {"Toxic from Date"}
+        ),
+
+    // ✅ Keep those rows now; only filter out true blanks/nulls
+    #"Filtered Rows" =
+        Table.SelectRows(
+            #"Replaced Already Toxic",
+            each ([Allianz OE Name] <> "Allianz Laos")
+              and ([Toxic from Date] <> null and Text.Trim(Text.From([Toxic from Date])) <> "")
+        ),
+
+    #"Replaced Value1" = Table.ReplaceValue(#"Filtered Rows",".0","",Replacer.ReplaceText,{"Release"}),
+    #"Filtered Rows1" = Table.SelectRows(#"Replaced Value1", each true),
+
+    // ✅ Parse dd/MM/yyyy (because 07/01/2000 is dd/MM/yyyy)
+    #"Changed Type with Locale" = Table.TransformColumnTypes(#"Filtered Rows1", {{"Toxic from Date", type date}}, "en-GB"),
+    #"Changed Type" = Table.TransformColumnTypes(#"Changed Type with Locale",{{"Number of IT Assets", type number}})
+in
+    #"Changed Type"
