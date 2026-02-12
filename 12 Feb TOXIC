@@ -17,3 +17,33 @@ CALCULATE(
     YEAR('Toxic Remediation'[Toxic from Date]) = SelectedYear,
     'Calendar'[Date] = MaxDateForScope
 ) + 0
+
+
+
+----------------------------
+FLTCount_PrevMonth =
+VAR SelDate =
+    MAX ( 'Calendar'[Date] )  -- last day in the selected month context
+
+VAR PrevMonthEnd =
+    EOMONTH ( SelDate, -1 )
+
+VAR PrevMonthStart =
+    DATE ( YEAR ( PrevMonthEnd ), MONTH ( PrevMonthEnd ), 1 )
+
+VAR MaxDateForScopePrevMonth =
+    CALCULATE (
+        MAX ( 'Toxic Remediation'[Date] ),
+        ALLEXCEPT ( 'Toxic Remediation', 'Toxic Remediation'[Allianz OE Name] ),
+        'Toxic Remediation'[Date] >= PrevMonthStart,
+        'Toxic Remediation'[Date] <= PrevMonthEnd
+    )
+
+RETURN
+CALCULATE (
+    SUM ( 'Toxic Remediation'[Number of IT Assets] ),
+    'Toxic Remediation'[Current Status] = "Forward Looking Toxic",
+    YEAR ( 'Toxic Remediation'[Toxic from Date] ) = YEAR ( PrevMonthEnd ),
+    'Toxic Remediation'[Date] = MaxDateForScopePrevMonth
+) + 0
+
